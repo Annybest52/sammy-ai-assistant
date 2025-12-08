@@ -8,10 +8,10 @@ const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
 const client = accountSid && authToken ? twilio(accountSid, authToken) : null;
 
 interface BookingDetails {
-  name: string;
-  email: string;
+  name?: string;
+  email?: string;
   phone?: string;
-  service: string;
+  service?: string;
   date?: string;
   time?: string;
 }
@@ -24,8 +24,8 @@ export async function sendBookingSMS(booking: BookingDetails): Promise<boolean> 
     return false;
   }
 
-  if (!booking.phone) {
-    console.log('⚠️ No phone number provided - skipping SMS');
+  if (!booking.phone || !booking.name) {
+    console.log('⚠️ No phone number or name provided - skipping SMS');
     return false;
   }
 

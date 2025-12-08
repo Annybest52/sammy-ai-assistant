@@ -6,9 +6,9 @@ const resend = process.env.RESEND_API_KEY
   : null;
 
 interface BookingDetails {
-  name: string;
-  email: string;
-  service: string;
+  name?: string;
+  email?: string;
+  service?: string;
   date?: string;
   time?: string;
   phone?: string;
@@ -18,6 +18,11 @@ export async function sendBookingConfirmation(booking: BookingDetails): Promise<
   if (!resend) {
     console.log('⚠️ RESEND_API_KEY not configured - skipping email');
     console.log('📧 Would have sent email to:', booking.email);
+    return false;
+  }
+
+  if (!booking.email || !booking.name) {
+    console.log('⚠️ Missing email or name - skipping confirmation email');
     return false;
   }
 
