@@ -1,4 +1,4 @@
-# Backend Dockerfile
+# Backend Dockerfile - v2 (force rebuild)
 FROM node:20-slim
 
 WORKDIR /app
