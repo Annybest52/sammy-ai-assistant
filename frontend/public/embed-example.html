@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sammy Widget - Embed Example</title>
+  <style>
+    /* Example website styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: white;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 60px;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .nav-links {
+      display: flex;
+      gap: 30px;
+    }
+    .nav-links a {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+    }
+    .nav-links a:hover {
+      color: white;
+    }
+    .hero {
+      text-align: center;
+      padding: 80px 0;
+    }
+    .hero h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    .hero p {
+      font-size: 18px;
+      color: rgba(255,255,255,0.7);
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+    .cta-btn {
+      padding: 15px 40px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .cta-btn:hover {
+      background: #5558e3;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+      margin-top: 80px;
+    }
+    .feature {
+      background: rgba(255,255,255,0.05);
+      padding: 30px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .feature h3 {
+      margin-bottom: 10px;
+    }
+    .feature p {
+      color: rgba(255,255,255,0.6);
+    }
+    .instructions {
+      margin-top: 80px;
+      padding: 40px;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 16px;
+      text-align: center;
+    }
+    .instructions h2 {
+      margin-bottom: 10px;
+    }
+    .instructions p {
+      color: rgba(255,255,255,0.7);
+    }
+    code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav>
+      <div class="logo">🏢 YourBusiness</div>
+      <div class="nav-links">
+        <a href="#">Home</a>
+        <a href="#">Services</a>
+        <a href="#">Pricing</a>
+        <a href="#">Contact</a>
+      </div>
+    </nav>
+
+    <div class="hero">
+      <h1>Welcome to Our Website</h1>
+      <p>This is a demo showing how Sammy, your AI assistant, can be embedded on any website. Click the chat bubble in the corner!</p>
+      <button class="cta-btn" onclick="SammyWidget.open()">Chat with Sammy</button>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <h3>🤖 AI-Powered</h3>
+        <p>Sammy uses GPT-4 to understand and respond naturally to customer questions.</p>
+      </div>
+      <div class="feature">
+        <h3>📅 Book Appointments</h3>
+        <p>Customers can schedule appointments directly through the chat widget.</p>
+      </div>
+      <div class="feature">
+        <h3>🔊 Voice Enabled</h3>
+        <p>Sammy can speak responses out loud for a more engaging experience.</p>
+      </div>
+    </div>
+
+    <div class="instructions">
+      <h2>👉 Try clicking the chat bubble in the bottom-right corner!</h2>
+      <p>Or use <code>SammyWidget.open()</code> to open it programmatically.</p>
+    </div>
+  </div>
+
+  <!-- 
+    ============================================
+    SAMMY WIDGET EMBED CODE
+    ============================================
+    Add this script to any website to embed Sammy.
+    Customize using data attributes:
+    
+    - data-server-url: Your backend server URL
+    - data-primary-color: Widget theme color (hex)
+    - data-position: "left" or "right"
+    - data-greeting: Custom greeting message
+    - data-agent-name: Name of your AI agent
+  -->
+  <script 
+    src="http://localhost:3000/sammy-widget.iife.js"
+    data-sammy-widget
+    data-server-url="http://localhost:3001"
+    data-primary-color="#6366f1"
+    data-position="right"
+    data-greeting="Hey there! 👋 I'm Sammy, the AI assistant for Dealey Media International. I can tell you about our AI solutions, lead generation, or book you a consultation. How can I help?"
+    data-agent-name="Sammy">
+  </script>
+
+</body>
+</html>
+
