@@ -14,7 +14,7 @@ function getScraper(): WebsiteScraper {
 
 // POST /api/scrape/website - Scrape a website
 router.post('/website', async (req: Request, res: Response) => {
-  const scraperInstance = getScraper();
+  let scraperInstance: WebsiteScraper | null = null;
   try {
     const { url, maxPages = 10 } = req.body;
 
@@ -30,6 +30,10 @@ router.post('/website', async (req: Request, res: Response) => {
     }
 
     console.log(`🕷️ Starting scrape for: ${url}`);
+
+    // Initialize scraper
+    scraperInstance = getScraper();
+    await scraperInstance.initialize();
 
     const results = await scraperInstance.scrapeWebsite(url, {
       maxPages,
@@ -49,12 +53,26 @@ router.post('/website', async (req: Request, res: Response) => {
         hasContactInfo: !!(r.contactInfo.email || r.contactInfo.phone),
       })),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Scrape error:', error);
-    await scraperInstance.close();
+    const errorMessage = error?.message || error?.toString() || 'Unknown error';
+    const errorStack = error?.stack || '';
+    
+    // Try to close scraper, but don't fail if it's already closed
+    if (scraperInstance) {
+      try {
+        await scraperInstance.close();
+      } catch (closeError) {
+        console.error('Error closing scraper:', closeError);
+      }
+    }
+    
+    // Return detailed error for debugging
     res.status(500).json({
       success: false,
-      error: 'Failed to scrape website',
+      error: errorMessage,
+      errorType: error?.name || 'Error',
+      details: errorStack.substring(0, 500), // Limit stack trace length
     });
   }
 });
