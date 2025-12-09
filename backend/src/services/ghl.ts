@@ -84,6 +84,58 @@ export class GHLService {
     }
   }
 
+  // Check calendar availability for a time slot
+  async checkAvailability(calendarId: string, startTime: string, endTime: string): Promise<{ available: boolean; conflictingAppointments?: any[] }> {
+    try {
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      
+      // Get appointments for the date range (check a wider range to catch overlaps)
+      const dayStart = new Date(start);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(start);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const response = await fetch(
+        `${this.baseUrl}/calendars/${calendarId}/appointments?locationId=${this.locationId}&startTime=${dayStart.toISOString()}&endTime=${dayEnd.toISOString()}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+            'Version': '2021-07-28',
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json() as { appointments?: Array<{ startTime: string; endTime: string }> };
+        const appointments = data.appointments || [];
+        
+        // Check for conflicts
+        const conflicts = appointments.filter(apt => {
+          const aptStart = new Date(apt.startTime);
+          const aptEnd = new Date(apt.endTime);
+          
+          // Check if there's any overlap
+          return (aptStart < end && aptEnd > start);
+        });
+
+        return {
+          available: conflicts.length === 0,
+          conflictingAppointments: conflicts,
+        };
+      }
+
+      // If we can't check, assume available (fail open)
+      return { available: true };
+    } catch (error) {
+      console.error('GHL availability check error:', error);
+      // Fail open - assume available if check fails
+      return { available: true };
+    }
+  }
+
   // Get calendar ID (you may need to configure this)
   async getCalendarId(calendarName?: string): Promise<string | null> {
     try {
@@ -220,6 +272,20 @@ export class GHLService {
       // Create appointment (default 1 hour duration)
       const endDateTime = new Date(startDateTime);
       endDateTime.setHours(endDateTime.getHours() + 1);
+
+      // Check availability BEFORE booking
+      const availability = await this.checkAvailability(
+        calendarId,
+        startDateTime.toISOString(),
+        endDateTime.toISOString()
+      );
+
+      if (!availability.available) {
+        return {
+          success: false,
+          error: `This time slot is not available. There's already an appointment scheduled at that time.`,
+        };
+      }
 
       const appointmentResult = await this.createAppointment({
         calendarId,

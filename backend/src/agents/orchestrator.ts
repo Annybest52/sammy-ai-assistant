@@ -45,6 +45,7 @@ const pendingBookings: Map<string, {
 export class AgentOrchestrator {
   private openai: OpenAI;
   private memoryManager: MemoryManager;
+  private knowledgeBase: any; // Lazy-loaded
 
   constructor(memoryManager: MemoryManager) {
     const apiKey = config.openai.apiKey;
@@ -53,6 +54,15 @@ export class AgentOrchestrator {
     }
     this.openai = new OpenAI({ apiKey });
     this.memoryManager = memoryManager;
+  }
+
+  // Lazy-load knowledge base
+  private async getKnowledgeBase() {
+    if (!this.knowledgeBase) {
+      const { KnowledgeBase } = await import('../knowledge/base.js');
+      this.knowledgeBase = new KnowledgeBase();
+    }
+    return this.knowledgeBase;
   }
 
   async processMessage(input: ProcessMessageInput): Promise<AgentResponse> {
@@ -88,8 +98,24 @@ export class AgentOrchestrator {
         history[history.length - 1]?.content.toLowerCase().includes('done') ||
         history[history.length - 1]?.content.toLowerCase().includes('solved')));
 
+    // Get relevant knowledge from scraped website content
+    let knowledgeContext = '';
+    try {
+      const kb = await this.getKnowledgeBase();
+      const knowledgeResults = await kb.search(message, 3); // Get top 3 relevant results
+      if (knowledgeResults.length > 0) {
+        knowledgeContext = '\n\nRELEVANT COMPANY INFORMATION FROM WEBSITE:\n';
+        knowledgeResults.forEach((result: { title: string; content: string }, idx: number) => {
+          knowledgeContext += `\n[${idx + 1}] ${result.title}\n${result.content.substring(0, 500)}\n`;
+        });
+      }
+    } catch (error) {
+      console.warn('Knowledge base search failed (continuing anyway):', error);
+    }
+
     // Build system prompt
     const systemPrompt = `You are Sammy, a warm and friendly assistant for Dealey Media International. You're here to help customers naturally, like a helpful colleague.
+${knowledgeContext}
 
 PERSONALITY & TONE:
 - Be conversational and natural - talk like a real person, not a robot
@@ -399,9 +425,10 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
           phone: booking.phone ? formatPhoneNumber(booking.phone) || booking.phone : undefined
         };
         
-        // Book in GoHighLevel first
+        // Book in GoHighLevel first (with availability check)
         const ghlService = getGHLService();
         let ghlAppointmentId: string | undefined;
+        let ghlError: string | undefined;
         
         if (ghlService && booking.name && booking.email && booking.service && (booking.date || booking.time)) {
           console.log('📅 Booking appointment in GoHighLevel...');
@@ -419,7 +446,13 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
             ghlAppointmentId = ghlResult.appointmentId;
             console.log(`✅ GHL Appointment created: ${ghlAppointmentId}`);
           } else {
-            console.error(`❌ GHL Booking failed: ${ghlResult.error}`);
+            ghlError = ghlResult.error;
+            console.error(`❌ GHL Booking failed: ${ghlError}`);
+            // Update response to mention availability issue
+            if (ghlError.includes('not available') || ghlError.includes('already an appointment')) {
+              fullText = `I'm sorry, but that time slot is already booked. Would you like to try a different time? ${fullText}`;
+              onToken(`I'm sorry, but that time slot is already booked. Would you like to try a different time? `);
+            }
           }
         }
         
