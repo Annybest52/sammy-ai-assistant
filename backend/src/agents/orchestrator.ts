@@ -45,7 +45,11 @@ export class AgentOrchestrator {
   private memoryManager: MemoryManager;
 
   constructor(memoryManager: MemoryManager) {
-    this.openai = new OpenAI({ apiKey: config.openai.apiKey });
+    const apiKey = config.openai.apiKey;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY environment variable is required. Please set it in your Railway environment variables.');
+    }
+    this.openai = new OpenAI({ apiKey });
     this.memoryManager = memoryManager;
   }
 

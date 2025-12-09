@@ -37,7 +37,16 @@ app.get('/health', (req, res) => {
 
 // Initialize services
 const memoryManager = new MemoryManager();
-const agentOrchestrator = new AgentOrchestrator(memoryManager);
+
+// Lazy initialization - only create orchestrator when needed
+let agentOrchestrator: AgentOrchestrator | null = null;
+
+function getOrchestrator(): AgentOrchestrator {
+  if (!agentOrchestrator) {
+    agentOrchestrator = new AgentOrchestrator(memoryManager);
+  }
+  return agentOrchestrator;
+}
 
 // WebSocket handling for real-time chat
 io.on('connection', (socket) => {
@@ -56,7 +65,7 @@ io.on('connection', (socket) => {
 
       if (stream) {
         // Use streaming for faster perceived response
-        await agentOrchestrator.processMessageStream({
+        await getOrchestrator().processMessageStream({
           message,
           sessionId,
           userId: userId || 'anonymous',
@@ -75,7 +84,7 @@ io.on('connection', (socket) => {
         });
       } else {
         // Non-streaming fallback
-        const response = await agentOrchestrator.processMessage({
+        const response = await getOrchestrator().processMessage({
           message,
           sessionId,
           userId: userId || 'anonymous',
@@ -93,12 +102,20 @@ io.on('connection', (socket) => {
         });
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing message:', error);
       socket.emit('agent:typing', { isTyping: false });
-      socket.emit('agent:error', { 
-        message: 'Sorry, I encountered an error. Please try again.' 
-      });
+      
+      // Provide helpful error message for missing API key
+      if (error?.message?.includes('OPENAI_API_KEY')) {
+        socket.emit('agent:error', { 
+          message: 'Server configuration error: OpenAI API key is missing. Please contact support.' 
+        });
+      } else {
+        socket.emit('agent:error', { 
+          message: 'Sorry, I encountered an error. Please try again.' 
+        });
+      }
     }
   });
 

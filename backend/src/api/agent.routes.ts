@@ -5,7 +5,16 @@ import { v4 as uuid } from 'uuid';
 
 const router = Router();
 const memoryManager = new MemoryManager();
-const agentOrchestrator = new AgentOrchestrator(memoryManager);
+
+// Lazy initialization - only create orchestrator when needed
+let agentOrchestrator: AgentOrchestrator | null = null;
+
+function getOrchestrator(): AgentOrchestrator {
+  if (!agentOrchestrator) {
+    agentOrchestrator = new AgentOrchestrator(memoryManager);
+  }
+  return agentOrchestrator;
+}
 
 // POST /api/agent/chat - Main chat endpoint
 router.post('/chat', async (req: Request, res: Response) => {
@@ -19,7 +28,7 @@ router.post('/chat', async (req: Request, res: Response) => {
     const session = sessionId || uuid();
     const user = userId || 'anonymous';
 
-    const response = await agentOrchestrator.processMessage({
+    const response = await getOrchestrator().processMessage({
       message,
       sessionId: session,
       userId: user,
