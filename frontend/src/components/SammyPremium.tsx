@@ -151,6 +151,7 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
   const hasDetectedSpeechRef = useRef<boolean>(false);
   const stateRef = useRef<AssistantState>('idle');
   const transcriptRef = useRef<string>('');
+  const stopAndSendRef = useRef<(() => void) | null>(null);
 
   // Scroll to bottom of messages
   useEffect(() => {
@@ -201,7 +202,7 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
               // Auto-send after silence
               silenceTimeoutRef.current = setTimeout(() => {
                 if (stateRef.current === 'listening' && transcriptRef.current.trim()) {
-                  stopAndSend();
+                  stopAndSendRef.current?.();
                 }
                 silenceTimeoutRef.current = null;
               }, SILENCE_DURATION - silenceDuration);
@@ -215,7 +216,7 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
     } catch (err) {
       console.error('Audio analysis error:', err);
     }
-  }, [stopAndSend]);
+  }, []);
 
   const stopAudioAnalysis = useCallback(() => {
     if (animationFrameRef.current) {
@@ -377,6 +378,11 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
       setState('idle');
     }
   }, [transcript, sendMessage, stopAudioAnalysis]);
+
+  // Keep ref updated so startAudioAnalysis can access it
+  useEffect(() => {
+    stopAndSendRef.current = stopAndSend;
+  }, [stopAndSend]);
 
   // Socket setup
   useEffect(() => {
