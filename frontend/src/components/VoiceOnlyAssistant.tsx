@@ -154,32 +154,46 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
     recognition.start();
   }, []);
 
-  // Socket setup
+  // Socket setup - auto-start when component mounts
   useEffect(() => {
-    if (!isActive) return;
-
-    console.log('🎤 Starting voice assistant...', SOCKET_URL);
+    console.log('🎤 VoiceOnlyAssistant mounted, starting...', SOCKET_URL);
     
     const socket = io(SOCKET_URL, {
       query: { sessionId: sessionIdRef.current },
       transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
     });
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('✅ Connected to server');
+      console.log('✅ Connected to server, speaking greeting...');
       const greeting = "Hello! I'm Sammy, your AI assistant. How can I help you today?";
       setState('speaking');
-      speak(greeting, () => {
-        console.log('🎤 Greeting finished, starting to listen...');
-        setState('idle');
-        // Auto-start listening after greeting
-        setTimeout(() => {
-          if (stateRef.current === 'idle') {
-            startListening();
-          }
-        }, 500);
-      });
+      
+      // Wait for voices to load
+      const speakGreeting = () => {
+        speak(greeting, () => {
+          console.log('🎤 Greeting finished, starting to listen...');
+          setState('idle');
+          // Auto-start listening after greeting
+          setTimeout(() => {
+            if (stateRef.current === 'idle') {
+              console.log('🎤 Starting to listen...');
+              startListening();
+            }
+          }, 500);
+        });
+      };
+
+      // Load voices first
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          speakGreeting();
+        };
+      } else {
+        speakGreeting();
+      }
     });
 
     socket.on('connect_error', (error) => {
@@ -229,7 +243,7 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
         clearTimeout(silenceTimeoutRef.current);
       }
     };
-  }, [isActive, speak, startListening]);
+  }, [speak, startListening]);
 
   // Auto-start when component mounts
   useEffect(() => {
