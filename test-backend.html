@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend Diagnostic</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h2 { color: #333; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔍 Backend Diagnostic Tool</h2>
+        <input type="text" id="railwayUrl" placeholder="sammy-ai-assistant-production.up.railway.app" value="sammy-ai-assistant-production.up.railway.app" />
+        
+        <div>
+            <button onclick="testHealth()">1. Test /health</button>
+            <button onclick="testScrapeStatus()">2. Test /api/scrape/status</button>
+            <button onclick="testAll()">3. Test All</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function getUrl() {
+            let url = document.getElementById('railwayUrl').value.trim();
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            return url;
+        }
+
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = message;
+        }
+
+        async function testHealth() {
+            const url = getUrl();
+            showResult(`Testing: ${url}/health\n\n`, 'info');
+            
+            try {
+                const response = await fetch(`${url}/health`);
+                const data = await response.json();
+                showResult(`✅ Health Check: SUCCESS\n\nStatus Code: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult(`❌ Health Check: FAILED\n\nError: ${error.message}\n\nThis means the backend is NOT running or not accessible.`, 'error');
+            }
+        }
+
+        async function testScrapeStatus() {
+            const url = getUrl();
+            showResult(`Testing: ${url}/api/scrape/status\n\n`, 'info');
+            
+            try {
+                const response = await fetch(`${url}/api/scrape/status`);
+                const data = await response.json();
+                showResult(`✅ Scrape Status: SUCCESS\n\nStatus Code: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult(`❌ Scrape Status: FAILED\n\nError: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAll() {
+            const url = getUrl();
+            let results = `🔍 Testing Backend: ${url}\n\n`;
+            
+            // Test 1: Health
+            try {
+                const healthRes = await fetch(`${url}/health`);
+                const healthData = await healthRes.json();
+                results += `✅ Health: OK (${healthRes.status})\n`;
+            } catch (error) {
+                results += `❌ Health: FAILED - ${error.message}\n`;
+            }
+            
+            // Test 2: Scrape Status
+            try {
+                const statusRes = await fetch(`${url}/api/scrape/status`);
+                const statusData = await statusRes.json();
+                results += `✅ Scrape Status: OK (${statusRes.status})\n`;
+            } catch (error) {
+                results += `❌ Scrape Status: FAILED - ${error.message}\n`;
+            }
+            
+            showResult(results, results.includes('❌') ? 'error' : 'success');
+        }
+    </script>
+</body>
+</html>
+

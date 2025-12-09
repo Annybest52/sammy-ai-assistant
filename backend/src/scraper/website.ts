@@ -34,21 +34,34 @@ export class WebsiteScraper {
 
   async initialize(): Promise<void> {
     if (!this.browser) {
-      const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
-      this.browser = await puppeteer.launch({
-        headless: true,
-        executablePath,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--disable-gpu',
-        ],
-      });
+      try {
+        const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+        const launchOptions: any = {
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--disable-extensions',
+          ],
+        };
+        
+        if (executablePath) {
+          launchOptions.executablePath = executablePath;
+        }
+        
+        this.browser = await puppeteer.launch(launchOptions);
+        console.log('✅ Puppeteer browser initialized successfully');
+      } catch (error: any) {
+        console.error('❌ Failed to initialize Puppeteer:', error.message);
+        throw new Error(`Puppeteer initialization failed: ${error.message}. Make sure Chromium is installed.`);
+      }
     }
   }
 

@@ -31,9 +31,18 @@ router.post('/website', async (req: Request, res: Response) => {
 
     console.log(`🕷️ Starting scrape for: ${url}`);
 
-    // Initialize scraper
-    scraperInstance = getScraper();
-    await scraperInstance.initialize();
+    // Initialize scraper with error handling
+    try {
+      scraperInstance = getScraper();
+      await scraperInstance.initialize();
+    } catch (initError: any) {
+      console.error('Failed to initialize scraper:', initError);
+      return res.status(500).json({
+        success: false,
+        error: `Failed to initialize browser: ${initError.message}`,
+        hint: 'Make sure Chromium is installed and PUPPETEER_EXECUTABLE_PATH is set correctly',
+      });
+    }
 
     const results = await scraperInstance.scrapeWebsite(url, {
       maxPages,
