@@ -4,7 +4,6 @@ import { io, Socket } from 'socket.io-client';
 const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
-  const isActive = true; // Always active when component is mounted
   const [state, setState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   
   const socketRef = useRef<Socket | null>(null);
