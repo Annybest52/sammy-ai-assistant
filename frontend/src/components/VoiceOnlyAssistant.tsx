@@ -3,12 +3,17 @@ import { io, Socket } from 'socket.io-client';
 
 const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
-export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
+export function VoiceOnlyAssistant({ onStarted, onSessionId }: { onStarted?: () => void; onSessionId?: (id: string) => void }) {
   const [state, setState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   
   const socketRef = useRef<Socket | null>(null);
   const recognitionRef = useRef<any>(null);
   const sessionIdRef = useRef(crypto.randomUUID());
+  
+  // Notify parent of session ID
+  useEffect(() => {
+    onSessionId?.(sessionIdRef.current);
+  }, [onSessionId]);
   const silenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSpeechTimeRef = useRef<number>(0);
   const hasDetectedSpeechRef = useRef<boolean>(false);

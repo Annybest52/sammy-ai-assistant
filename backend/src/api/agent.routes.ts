@@ -16,6 +16,9 @@ function getOrchestrator(): AgentOrchestrator {
   return agentOrchestrator;
 }
 
+// Export for use in index.ts
+export { getOrchestrator };
+
 // POST /api/agent/chat - Main chat endpoint
 router.post('/chat', async (req: Request, res: Response) => {
   try {
@@ -54,7 +57,21 @@ router.post('/chat', async (req: Request, res: Response) => {
 router.get('/history/:sessionId', async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
-    const history = await memoryManager.getConversationHistory(sessionId);
+    
+    // Try to get from orchestrator first (in-memory)
+    const orchestrator = getOrchestrator();
+    const history = orchestrator.getConversationHistory(sessionId);
+    
+    // If no history in orchestrator, try memory manager
+    if (history.length === 0) {
+      const memoryHistory = await memoryManager.getConversationHistory(sessionId);
+      if (memoryHistory.length > 0) {
+        return res.json({
+          success: true,
+          history: memoryHistory,
+        });
+      }
+    }
 
     res.json({
       success: true,
@@ -65,6 +82,32 @@ router.get('/history/:sessionId', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to get history',
+    });
+  }
+});
+
+// GET /api/agent/transcript/:sessionId - Get formatted transcript
+router.get('/transcript/:sessionId', async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    const orchestrator = getOrchestrator();
+    const history = orchestrator.getConversationHistory(sessionId);
+    
+    // Format as readable transcript
+    const transcript = history.map((msg, index) => {
+      const timestamp = new Date().toISOString();
+      const role = msg.role === 'user' ? 'User' : 'Sammy';
+      return `[${timestamp}] ${role}: ${msg.content}`;
+    }).join('\n\n');
+
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename="conversation-${sessionId}.txt"`);
+    res.send(transcript);
+  } catch (error) {
+    console.error('Transcript error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate transcript',
     });
   }
 });

@@ -3,7 +3,7 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import { config } from './config/index.js';
-import { agentRouter } from './api/agent.routes.js';
+import { agentRouter, getOrchestrator as getAgentOrchestrator } from './api/agent.routes.js';
 import { calendarRouter } from './api/calendar.routes.js';
 import { scrapeRouter } from './api/scrape.routes.js';
 import { AgentOrchestrator } from './agents/orchestrator.js';
@@ -121,6 +121,24 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`🔌 Client disconnected: ${socket.id}`);
+  });
+
+  // Request conversation history
+  socket.on('chat:history', () => {
+    try {
+      const history = getAgentOrchestrator().getConversationHistory(sessionId);
+      socket.emit('chat:history:response', {
+        sessionId,
+        history,
+        timestamp: new Date().toISOString(),
+      });
+      console.log(`📜 Sent conversation history for session: ${sessionId} (${history.length} messages)`);
+    } catch (error) {
+      console.error('Error getting conversation history:', error);
+      socket.emit('chat:error', {
+        message: 'Failed to retrieve conversation history',
+      });
+    }
   });
 });
 

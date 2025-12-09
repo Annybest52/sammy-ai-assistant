@@ -419,6 +419,16 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
     }
   }
 
+  // Get conversation history for a session
+  getConversationHistory(sessionId: string): { role: 'user' | 'assistant'; content: string }[] {
+    return conversations.get(sessionId) || [];
+  }
+
+  // Get all conversation sessions (for admin/debugging)
+  getAllSessions(): string[] {
+    return Array.from(conversations.keys());
+  }
+
   private extractBookingInfo(message: string, booking: any) {
     const lower = message.toLowerCase();
     
