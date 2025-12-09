@@ -273,18 +273,19 @@
                     if (data.errorType) addLog(`Error Type: ${data.errorType}`);
                     if (data.details) addLog(`Details: ${data.details.substring(0, 200)}...`);
                 }
-            } catch (error: any) {
+            } catch (error) {
                 resultDiv.className = 'result error';
-                let errorMessage = error.message || 'Unknown error';
+                const errorMessage = error?.message || 'Unknown error';
                 
                 // Provide more helpful error messages
+                let displayMessage = errorMessage;
                 if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-                    errorMessage = `❌ Connection Failed!\n\nPossible causes:\n1. Railway backend is not running\n2. URL is incorrect\n3. CORS issue (try opening Chrome DevTools → Console for details)\n4. Network/firewall blocking the request\n\nOriginal error: ${error.message}\n\nTry:\n- Check Railway dashboard to ensure backend is running\n- Verify the URL is correct\n- Open Chrome DevTools (F12) → Console tab to see detailed error`;
+                    displayMessage = `❌ Connection Failed!\n\nPossible causes:\n1. Railway backend is not running\n2. URL is incorrect\n3. CORS issue (try opening Chrome DevTools → Console for details)\n4. Network/firewall blocking the request\n\nOriginal error: ${errorMessage}\n\nTry:\n- Check Railway dashboard to ensure backend is running\n- Verify the URL is correct\n- Open Chrome DevTools (F12) → Console tab to see detailed error`;
                 }
                 
-                resultDiv.innerHTML = errorMessage.replace(/\n/g, '<br>');
-                addLog(`❌ Error: ${error.message}`);
-                addLog(`Error type: ${error.name || 'Unknown'}`);
+                resultDiv.innerHTML = displayMessage.replace(/\n/g, '<br>');
+                addLog(`❌ Error: ${errorMessage}`);
+                addLog(`Error type: ${error?.name || 'Unknown'}`);
                 console.error('Scrape error:', error);
             } finally {
                 scrapeBtn.disabled = false;
