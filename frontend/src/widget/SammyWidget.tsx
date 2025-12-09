@@ -178,6 +178,19 @@ export function SammyWidget({ config }: { config: WidgetConfig }) {
     window.speechSynthesis.speak(utterance);
   }, []);
 
+  const sendMessage = useCallback((text: string) => {
+    if (!socketRef.current?.connected || !text.trim()) return;
+
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: text,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    socketRef.current.emit('chat:message', { message: text });
+  }, []);
+
   // Initialize speech recognition
   useEffect(() => {
     const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -249,19 +262,6 @@ export function SammyWidget({ config }: { config: WidgetConfig }) {
       setIsListening(true);
     }
   }, [isListening]);
-
-  const sendMessage = useCallback((text: string) => {
-    if (!socketRef.current?.connected || !text.trim()) return;
-
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: text,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMessage]);
-    socketRef.current.emit('chat:message', { message: text });
-  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
