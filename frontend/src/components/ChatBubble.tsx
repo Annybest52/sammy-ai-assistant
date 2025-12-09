@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { VoiceOnlyAssistant } from './VoiceOnlyAssistant';
-import { TranscriptViewer } from './TranscriptViewer';
 
 export function ChatBubble() {
   const [isActive, setIsActive] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [showTranscript, setShowTranscript] = useState(false);
-  const [sessionId, setSessionId] = useState<string>('');
 
   const handleOrbClick = () => {
     if (!isActive) {
@@ -18,12 +15,7 @@ export function ChatBubble() {
   return (
     <>
       {/* Voice-only assistant (no UI) */}
-      {isActive && <VoiceOnlyAssistant onSessionId={setSessionId} />}
-      
-      {/* Transcript Viewer */}
-      {showTranscript && sessionId && (
-        <TranscriptViewer sessionId={sessionId} onClose={() => setShowTranscript(false)} />
-      )}
+      {isActive && <VoiceOnlyAssistant />}
 
       {/* Floating Glowing Orb - Pure orb, no emoji */}
       <motion.div
@@ -190,54 +182,28 @@ export function ChatBubble() {
 
               {/* Active indicator - shows when voice is active */}
               {isActive && (
-                <>
-                  <motion.span
-                    animate={{
-                      scale: [1, 1.3, 1],
-                      opacity: [0.8, 1, 0.8],
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      ease: 'easeInOut',
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '4px',
-                      right: '4px',
-                      width: '12px',
-                      height: '12px',
-                      background: '#22c55e',
-                      borderRadius: '50%',
-                      boxShadow: '0 0 12px rgba(34, 197, 94, 0.8), 0 0 24px rgba(34, 197, 94, 0.4)',
-                      zIndex: 2,
-                    }}
-                  />
-                  {/* Transcript button - double click to view */}
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onDoubleClick={() => setShowTranscript(true)}
-                    title="Double-click to view transcript"
-                    style={{
-                      position: 'absolute',
-                      bottom: '-40px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      padding: '6px 12px',
-                      borderRadius: '20px',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      background: 'rgba(0, 0, 0, 0.6)',
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      fontSize: '11px',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      zIndex: 3,
-                    }}
-                  >
-                    📜 Transcript
-                  </motion.button>
-                </>
+                <motion.span
+                  animate={{
+                    scale: [1, 1.3, 1],
+                    opacity: [0.8, 1, 0.8],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    width: '12px',
+                    height: '12px',
+                    background: '#22c55e',
+                    borderRadius: '50%',
+                    boxShadow: '0 0 12px rgba(34, 197, 94, 0.8), 0 0 24px rgba(34, 197, 94, 0.4)',
+                    zIndex: 2,
+                  }}
+                />
               )}
             </motion.button>
 

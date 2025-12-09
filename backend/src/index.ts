@@ -6,6 +6,7 @@ import { config } from './config/index.js';
 import { agentRouter, getOrchestrator as getAgentOrchestrator } from './api/agent.routes.js';
 import { calendarRouter } from './api/calendar.routes.js';
 import { scrapeRouter } from './api/scrape.routes.js';
+import { adminRouter } from './api/admin.routes.js';
 import { AgentOrchestrator } from './agents/orchestrator.js';
 import { MemoryManager } from './memory/manager.js';
 
@@ -29,6 +30,7 @@ app.use('/audio', express.static('public/audio'));
 app.use('/api/agent', agentRouter);
 app.use('/api/calendar', calendarRouter);
 app.use('/api/scrape', scrapeRouter);
+app.use('/api/admin', adminRouter);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -3,6 +3,7 @@ import { config } from '../config/index.js';
 import { MemoryManager } from '../memory/manager.js';
 import { sendBookingConfirmation, sendBookingNotification } from '../services/email.js';
 import { sendBookingSMS, sendBookingNotificationSMS, formatPhoneNumber } from '../services/sms.js';
+import { conversationStorage } from '../storage/conversations.js';
 
 interface ProcessMessageInput {
   message: string;
@@ -217,6 +218,18 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
         history.splice(0, history.length - 20);
       }
 
+      // Save to persistent storage
+      try {
+        await conversationStorage.saveMessage(sessionId, 'user', message, {
+          userId: input.userId,
+          email: booking.email,
+          name: booking.name,
+        });
+        await conversationStorage.saveMessage(sessionId, 'assistant', responseText);
+      } catch (error) {
+        console.error('Error saving conversation to storage:', error);
+      }
+
       const duration = Date.now() - startTime;
       console.log(`✅ Response in ${duration}ms`);
 
@@ -404,6 +417,18 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
 
       if (history.length > 20) {
         history.splice(0, history.length - 20);
+      }
+
+      // Save to persistent storage
+      try {
+        await conversationStorage.saveMessage(sessionId, 'user', message, {
+          userId: input.userId,
+          email: booking.email,
+          name: booking.name,
+        });
+        await conversationStorage.saveMessage(sessionId, 'assistant', fullText);
+      } catch (error) {
+        console.error('Error saving conversation to storage:', error);
       }
 
       const duration = Date.now() - startTime;
