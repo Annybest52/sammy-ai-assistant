@@ -182,12 +182,12 @@ export function SammyWidget({ config }: { config: WidgetConfig }) {
   useEffect(() => {
     const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognitionAPI) {
-      recognitionRef.current = new SpeechRecognitionAPI();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
+      const recognition = new SpeechRecognitionAPI() as SpeechRecognitionInstance;
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
 
-      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         let interim = '';
         let final = '';
 
@@ -215,14 +215,16 @@ export function SammyWidget({ config }: { config: WidgetConfig }) {
         }
       };
 
-      recognitionRef.current.onerror = () => {
+      recognition.onerror = () => {
         setIsListening(false);
         setInterimTranscript('');
       };
 
-      recognitionRef.current.onend = () => {
+      recognition.onend = () => {
         setIsListening(false);
       };
+
+      recognitionRef.current = recognition;
     }
 
     return () => {
@@ -230,7 +232,7 @@ export function SammyWidget({ config }: { config: WidgetConfig }) {
         recognitionRef.current.abort();
       }
     };
-  }, []);
+  }, [sendMessage]);
 
   const toggleListening = useCallback(() => {
     if (!recognitionRef.current) {

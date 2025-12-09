@@ -12,7 +12,6 @@ const SOCKET_URL = 'http://localhost:3001';
 export function VoiceAssistant({ onClose }: VoiceAssistantProps) {
   const [state, setState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   const [transcript, setTranscript] = useState('');
-  const [response, setResponse] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState('');
   const [debugInfo, setDebugInfo] = useState('');
@@ -202,7 +201,6 @@ export function VoiceAssistant({ onClose }: VoiceAssistantProps) {
       console.log('✅ Connected to server');
       setIsConnected(true);
       setDebugInfo('Connected to server');
-      setResponse("Hi! I'm Sammy. Tap the mic to talk!");
       setState('speaking');
       speak("Hi! I'm Sammy. Tap the mic to talk!", () => setState('idle'));
     });
@@ -214,7 +212,6 @@ export function VoiceAssistant({ onClose }: VoiceAssistantProps) {
 
     socket.on('agent:response', (data: { message: string }) => {
       console.log('🤖 Response:', data.message);
-      setResponse(data.message);
       setDebugInfo('Got response');
       setState('speaking');
       speak(data.message, () => setState('idle'));

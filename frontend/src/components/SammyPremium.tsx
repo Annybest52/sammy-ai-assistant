@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mic, Send, Phone, PhoneOff, Settings, Volume2, VolumeX } from 'lucide-react';
+import { X, Mic, Send, Settings, Volume2, VolumeX } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
 interface SammyPremiumProps {

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { PhoneOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
 interface VoiceCallProps {
@@ -65,7 +65,7 @@ export function VoiceCall({ onClose }: VoiceCallProps) {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const sessionIdRef = useRef(crypto.randomUUID());
-  const callTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transcriptRef = useRef<string>('');
 
   // Initialize socket connection
@@ -192,6 +192,13 @@ export function VoiceCall({ onClose }: VoiceCallProps) {
     };
   }, [isMuted, isSpeaking, isConnected]);
 
+  const sendMessage = useCallback((text: string) => {
+    if (socketRef.current?.connected && text.trim()) {
+      setStatus('processing');
+      socketRef.current.emit('chat:message', { message: text });
+    }
+  }, []);
+
   const startListening = useCallback(() => {
     if (!recognitionRef.current) {
       console.error('❌ Speech recognition not available');
@@ -224,13 +231,6 @@ export function VoiceCall({ onClose }: VoiceCallProps) {
       }
     }
   }, [sendMessage]);
-
-  const sendMessage = useCallback((text: string) => {
-    if (socketRef.current?.connected && text.trim()) {
-      setStatus('processing');
-      socketRef.current.emit('chat:message', { message: text });
-    }
-  }, []);
 
   const playAudio = async (audioUrl: string): Promise<void> => {
     return new Promise((resolve) => {
