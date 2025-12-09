@@ -1,31 +1,37 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { SammyPremium } from './SammyPremium';
+import { motion } from 'framer-motion';
+import { VoiceOnlyAssistant } from './VoiceOnlyAssistant';
 
 export function ChatBubble() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isActive, setIsActive] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+
+  const handleOrbClick = () => {
+    if (!isActive) {
+      setIsActive(true);
+    }
+  };
 
   return (
     <>
-      {/* Floating Glowing Orb */}
-      <AnimatePresence>
-        {!isOpen && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            onHoverStart={() => setIsHovered(true)}
-            onHoverEnd={() => setIsHovered(false)}
-            style={{
-              position: 'fixed',
-              bottom: '32px',
-              right: '32px',
-              zIndex: 9998,
-              cursor: 'pointer',
-            }}
-            onClick={() => setIsOpen(true)}
-          >
+      {/* Voice-only assistant (no UI) */}
+      {isActive && <VoiceOnlyAssistant />}
+
+      {/* Floating Glowing Orb - Pure orb, no emoji */}
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
+        style={{
+          position: 'fixed',
+          bottom: '32px',
+          right: '32px',
+          zIndex: 9998,
+          cursor: 'pointer',
+        }}
+        onClick={handleOrbClick}
+      >
             {/* Outer Glow Rings */}
             <motion.div
               animate={{
@@ -135,54 +141,76 @@ export function ChatBubble() {
                 }}
               />
 
-              {/* Icon */}
-              <motion.span
-                animate={{
-                  scale: isHovered ? [1, 1.1, 1] : 1,
-                }}
-                transition={{
-                  duration: 0.5,
-                  ease: 'easeInOut',
-                }}
-                style={{
-                  position: 'relative',
-                  zIndex: 1,
-                  filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
-                }}
-              >
-                🤖
-              </motion.span>
+              {/* Sparkling particles inside orb - no emoji, just pure glow */}
+              {[...Array(8)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  animate={{
+                    x: [
+                      Math.cos((i / 8) * Math.PI * 2) * 15,
+                      Math.cos((i / 8) * Math.PI * 2 + Math.PI) * 20,
+                      Math.cos((i / 8) * Math.PI * 2) * 15,
+                    ],
+                    y: [
+                      Math.sin((i / 8) * Math.PI * 2) * 15,
+                      Math.sin((i / 8) * Math.PI * 2 + Math.PI) * 20,
+                      Math.sin((i / 8) * Math.PI * 2) * 15,
+                    ],
+                    opacity: [0.3, 0.8, 0.3],
+                    scale: [0.8, 1.2, 0.8],
+                  }}
+                  transition={{
+                    duration: 3 + i * 0.2,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                    delay: i * 0.1,
+                  }}
+                  style={{
+                    position: 'absolute',
+                    width: '3px',
+                    height: '3px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    boxShadow: '0 0 6px rgba(255, 255, 255, 0.8), 0 0 12px rgba(99, 102, 241, 0.6)',
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                  }}
+                />
+              ))}
 
-              {/* Online Indicator */}
-              <motion.span
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [1, 0.8, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
-                style={{
-                  position: 'absolute',
-                  top: '4px',
-                  right: '4px',
-                  width: '16px',
-                  height: '16px',
-                  background: '#22c55e',
-                  borderRadius: '50%',
-                  border: '3px solid rgba(255, 255, 255, 0.9)',
-                  boxShadow: '0 0 10px rgba(34, 197, 94, 0.6), inset 0 0 5px rgba(255, 255, 255, 0.3)',
-                  zIndex: 2,
-                }}
-              />
+              {/* Active indicator - shows when voice is active */}
+              {isActive && (
+                <motion.span
+                  animate={{
+                    scale: [1, 1.3, 1],
+                    opacity: [0.8, 1, 0.8],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    width: '12px',
+                    height: '12px',
+                    background: '#22c55e',
+                    borderRadius: '50%',
+                    boxShadow: '0 0 12px rgba(34, 197, 94, 0.8), 0 0 24px rgba(34, 197, 94, 0.4)',
+                    zIndex: 2,
+                  }}
+                />
+              )}
             </motion.button>
 
-            {/* Floating Particles */}
+            {/* Floating Particles on hover */}
             {isHovered && (
               <>
-                {[...Array(6)].map((_, i) => (
+                {[...Array(8)].map((_, i) => (
                   <motion.div
                     key={i}
                     initial={{
@@ -192,24 +220,24 @@ export function ChatBubble() {
                       scale: 0,
                     }}
                     animate={{
-                      x: 36 + Math.cos((i / 6) * Math.PI * 2) * 40,
-                      y: 36 + Math.sin((i / 6) * Math.PI * 2) * 40,
+                      x: 36 + Math.cos((i / 8) * Math.PI * 2) * 50,
+                      y: 36 + Math.sin((i / 8) * Math.PI * 2) * 50,
                       opacity: [0, 1, 0],
-                      scale: [0, 1, 0],
+                      scale: [0, 1.5, 0],
                     }}
                     transition={{
-                      duration: 1.5,
+                      duration: 2,
                       repeat: Infinity,
                       delay: i * 0.1,
                       ease: 'easeOut',
                     }}
                     style={{
                       position: 'absolute',
-                      width: '4px',
-                      height: '4px',
+                      width: '5px',
+                      height: '5px',
                       borderRadius: '50%',
-                      background: 'rgba(99, 102, 241, 0.8)',
-                      boxShadow: '0 0 8px rgba(99, 102, 241, 0.6)',
+                      background: `hsl(${(i * 45) % 360}, 70%, 60%)`,
+                      boxShadow: `0 0 10px hsl(${(i * 45) % 360}, 70%, 60%), 0 0 20px hsl(${(i * 45) % 360}, 70%, 40%)`,
                       pointerEvents: 'none',
                     }}
                   />
@@ -217,15 +245,6 @@ export function ChatBubble() {
               </>
             )}
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Voice Assistant Widget (appears on same page) */}
-      <AnimatePresence>
-        {isOpen && (
-          <SammyPremium onClose={() => setIsOpen(false)} />
-        )}
-      </AnimatePresence>
     </>
   );
 }
