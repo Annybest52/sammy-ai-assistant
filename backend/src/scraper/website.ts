@@ -275,63 +275,68 @@ export class WebsiteScraper {
   }
 
   private async storeInKnowledgeBase(content: ScrapedContent): Promise<void> {
-    const documents = [];
+    try {
+      const documents = [];
 
-    // Store main page content
-    documents.push({
-      id: uuid(),
-      title: content.title,
-      content: content.content,
-      source: content.url,
-      category: 'page_content',
-    });
-
-    // Store services
-    if (content.services.length > 0) {
+      // Store main page content
       documents.push({
         id: uuid(),
-        title: `Services from ${content.title}`,
-        content: content.services.join('\n'),
+        title: content.title,
+        content: content.content,
         source: content.url,
-        category: 'services',
+        category: 'page_content',
       });
-    }
 
-    // Store prices
-    if (content.prices.length > 0) {
-      documents.push({
-        id: uuid(),
-        title: `Pricing from ${content.title}`,
-        content: content.prices.join('\n'),
-        source: content.url,
-        category: 'pricing',
-      });
-    }
+      // Store services
+      if (content.services.length > 0) {
+        documents.push({
+          id: uuid(),
+          title: `Services from ${content.title}`,
+          content: content.services.join('\n'),
+          source: content.url,
+          category: 'services',
+        });
+      }
 
-    // Store FAQs
-    for (const faq of content.faqs) {
-      documents.push({
-        id: uuid(),
-        title: faq.question,
-        content: faq.answer,
-        source: content.url,
-        category: 'faq',
-      });
-    }
+      // Store prices
+      if (content.prices.length > 0) {
+        documents.push({
+          id: uuid(),
+          title: `Pricing from ${content.title}`,
+          content: content.prices.join('\n'),
+          source: content.url,
+          category: 'pricing',
+        });
+      }
 
-    // Store contact info
-    if (content.contactInfo.email || content.contactInfo.phone) {
-      documents.push({
-        id: uuid(),
-        title: `Contact Info - ${content.title}`,
-        content: JSON.stringify(content.contactInfo, null, 2),
-        source: content.url,
-        category: 'contact',
-      });
-    }
+      // Store FAQs
+      for (const faq of content.faqs) {
+        documents.push({
+          id: uuid(),
+          title: faq.question,
+          content: faq.answer,
+          source: content.url,
+          category: 'faq',
+        });
+      }
 
-    await this.knowledgeBase.addDocuments(documents);
-    console.log(`✅ Stored ${documents.length} documents from ${content.url}`);
+      // Store contact info
+      if (content.contactInfo.email || content.contactInfo.phone) {
+        documents.push({
+          id: uuid(),
+          title: `Contact Info - ${content.title}`,
+          content: JSON.stringify(content.contactInfo, null, 2),
+          source: content.url,
+          category: 'contact',
+        });
+      }
+
+      await this.knowledgeBase.addDocuments(documents);
+      console.log(`✅ Stored ${documents.length} documents from ${content.url}`);
+    } catch (error) {
+      // Don't fail scraping if knowledge base storage fails
+      console.warn('⚠️ Failed to store in knowledge base (continuing anyway):', error);
+    }
   }
 }
 

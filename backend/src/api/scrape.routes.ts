@@ -2,10 +2,19 @@ import { Router, Request, Response } from 'express';
 import { WebsiteScraper } from '../scraper/website.js';
 
 const router = Router();
-const scraper = new WebsiteScraper();
+// Lazy-load scraper only when needed (not at module load time)
+let scraper: WebsiteScraper | null = null;
+
+function getScraper(): WebsiteScraper {
+  if (!scraper) {
+    scraper = new WebsiteScraper();
+  }
+  return scraper;
+}
 
 // POST /api/scrape/website - Scrape a website
 router.post('/website', async (req: Request, res: Response) => {
+  const scraperInstance = getScraper();
   try {
     const { url, maxPages = 10 } = req.body;
 
@@ -22,12 +31,12 @@ router.post('/website', async (req: Request, res: Response) => {
 
     console.log(`🕷️ Starting scrape for: ${url}`);
 
-    const results = await scraper.scrapeWebsite(url, {
+    const results = await scraperInstance.scrapeWebsite(url, {
       maxPages,
       waitForJs: true,
     });
 
-    await scraper.close();
+    await scraperInstance.close();
 
     res.json({
       success: true,
@@ -42,7 +51,7 @@ router.post('/website', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Scrape error:', error);
-    await scraper.close();
+    await scraperInstance.close();
     res.status(500).json({
       success: false,
       error: 'Failed to scrape website',
@@ -52,6 +61,7 @@ router.post('/website', async (req: Request, res: Response) => {
 
 // POST /api/scrape/multiple - Scrape multiple websites
 router.post('/multiple', async (req: Request, res: Response) => {
+  const scraperInstance = getScraper();
   try {
     const { urls, maxPagesPerSite = 5 } = req.body;
 
@@ -64,7 +74,7 @@ router.post('/multiple', async (req: Request, res: Response) => {
     for (const url of urls) {
       try {
         console.log(`🕷️ Scraping: ${url}`);
-        const results = await scraper.scrapeWebsite(url, {
+        const results = await scraperInstance.scrapeWebsite(url, {
           maxPages: maxPagesPerSite,
           waitForJs: true,
         });
@@ -82,7 +92,7 @@ router.post('/multiple', async (req: Request, res: Response) => {
       }
     }
 
-    await scraper.close();
+    await scraperInstance.close();
 
     res.json({
       success: true,
@@ -90,7 +100,7 @@ router.post('/multiple', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Multi-scrape error:', error);
-    await scraper.close();
+    await scraperInstance.close();
     res.status(500).json({
       success: false,
       error: 'Failed to scrape websites',
@@ -108,5 +118,3 @@ router.get('/status', (req: Request, res: Response) => {
 });
 
 export { router as scrapeRouter };
-
-

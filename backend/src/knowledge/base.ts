@@ -11,17 +11,41 @@ interface KnowledgeResult {
 }
 
 export class KnowledgeBase {
-  private pinecone: Pinecone;
+  private pinecone: Pinecone | null = null;
   private openai: OpenAI;
   private indexName: string;
+  private isEnabled: boolean;
 
   constructor() {
-    this.pinecone = new Pinecone({ apiKey: config.pinecone.apiKey });
+    // Only initialize Pinecone if credentials are provided
+    if (config.pinecone.apiKey && config.pinecone.index) {
+      try {
+        this.pinecone = new Pinecone({ apiKey: config.pinecone.apiKey });
+        this.indexName = config.pinecone.index;
+        this.isEnabled = true;
+        console.log('✅ Pinecone connected');
+      } catch (error) {
+        console.warn('⚠️ Pinecone connection failed, knowledge base disabled');
+        this.pinecone = null;
+        this.isEnabled = false;
+        this.indexName = '';
+      }
+    } else {
+      console.log('ℹ️ Pinecone not configured, knowledge base disabled');
+      this.isEnabled = false;
+      this.indexName = '';
+    }
+
+    // OpenAI is still needed for embeddings (even if Pinecone is disabled)
     this.openai = new OpenAI({ apiKey: config.openai.apiKey });
-    this.indexName = config.pinecone.index;
   }
 
   async search(query: string, topK: number = 5): Promise<KnowledgeResult[]> {
+    if (!this.isEnabled || !this.pinecone) {
+      console.log('ℹ️ Knowledge base search skipped (not configured)');
+      return [];
+    }
+
     try {
       // Generate embedding for query
       const embedding = await this.generateEmbedding(query);
@@ -54,6 +78,11 @@ export class KnowledgeBase {
     source: string;
     category?: string;
   }): Promise<void> {
+    if (!this.isEnabled || !this.pinecone) {
+      console.log('ℹ️ Document storage skipped (knowledge base not configured)');
+      return;
+    }
+
     try {
       const embedding = await this.generateEmbedding(`${doc.title}\n${doc.content}`);
 
@@ -75,7 +104,7 @@ export class KnowledgeBase {
       console.log(`✅ Added document to knowledge base: ${doc.title}`);
     } catch (error) {
       console.error('Error adding document:', error);
-      throw error;
+      // Don't throw - just log the error
     }
   }
 
@@ -86,6 +115,11 @@ export class KnowledgeBase {
     source: string;
     category?: string;
   }>): Promise<void> {
+    if (!this.isEnabled || !this.pinecone) {
+      console.log(`ℹ️ Document storage skipped (${docs.length} documents, knowledge base not configured)`);
+      return;
+    }
+
     const batchSize = 100;
     
     for (let i = 0; i < docs.length; i += batchSize) {
@@ -104,20 +138,24 @@ export class KnowledgeBase {
         }))
       );
 
-      const index = this.pinecone.index(this.indexName);
+      const index = this.pinecone!.index(this.indexName);
       await index.upsert(vectors);
       console.log(`✅ Added batch ${i / batchSize + 1} of documents`);
     }
   }
 
   async deleteDocument(id: string): Promise<void> {
+    if (!this.isEnabled || !this.pinecone) {
+      return;
+    }
+
     try {
       const index = this.pinecone.index(this.indexName);
       await index.deleteOne(id);
       console.log(`🗑️ Deleted document: ${id}`);
     } catch (error) {
       console.error('Error deleting document:', error);
-      throw error;
+      // Don't throw - just log the error
     }
   }
 
@@ -130,5 +168,3 @@ export class KnowledgeBase {
     return response.data[0].embedding;
   }
 }
-
-
