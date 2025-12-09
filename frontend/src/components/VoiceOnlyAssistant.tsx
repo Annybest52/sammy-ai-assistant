@@ -4,7 +4,7 @@ import { io, Socket } from 'socket.io-client';
 const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
-  const [isActive, setIsActive] = useState(false);
+  const isActive = true; // Always active when component is mounted
   const [state, setState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   
   const socketRef = useRef<Socket | null>(null);
@@ -158,8 +158,11 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
   useEffect(() => {
     if (!isActive) return;
 
+    console.log('🎤 Starting voice assistant...', SOCKET_URL);
+    
     const socket = io(SOCKET_URL, {
       query: { sessionId: sessionIdRef.current },
+      transports: ['websocket', 'polling'],
     });
     socketRef.current = socket;
 
@@ -168,6 +171,7 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
       const greeting = "Hello! I'm Sammy, your AI assistant. How can I help you today?";
       setState('speaking');
       speak(greeting, () => {
+        console.log('🎤 Greeting finished, starting to listen...');
         setState('idle');
         // Auto-start listening after greeting
         setTimeout(() => {
@@ -176,6 +180,11 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
           }
         }, 500);
       });
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('❌ Connection error:', error);
+      console.error('Socket URL:', SOCKET_URL);
     });
 
     socket.on('disconnect', () => {
@@ -224,24 +233,9 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
 
   // Auto-start when component mounts
   useEffect(() => {
-    if (isActive) {
-      // Component is active, connection will start via socket effect
-      onStarted?.();
-    }
-  }, [isActive, onStarted]);
-
-  // Expose start function
-  const start = useCallback(() => {
-    setIsActive(true);
-  }, []);
-
-  // Expose via window for ChatBubble to call
-  useEffect(() => {
-    (window as any).startVoiceAssistant = start;
-    return () => {
-      delete (window as any).startVoiceAssistant;
-    };
-  }, [start]);
+    // Component mounts, connection will start via socket effect
+    onStarted?.();
+  }, [onStarted]);
 
   return null; // No UI - pure voice interaction
 }
