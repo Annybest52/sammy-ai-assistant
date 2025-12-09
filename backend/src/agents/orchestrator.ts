@@ -74,13 +74,26 @@ export class AgentOrchestrator {
                             lowerMessage.includes('schedule') ||
                             lowerMessage.includes('meeting');
 
-    // Build system prompt
-    const systemPrompt = `You are Sammy, a friendly AI assistant for Dealey Media International, a digital marketing agency.
+    // Detect if this seems like a problem-solving conversation
+    const isProblemSolved = history.length > 0 && 
+      (history[history.length - 1]?.role === 'assistant' && 
+       (history[history.length - 1]?.content.toLowerCase().includes('great') ||
+        history[history.length - 1]?.content.toLowerCase().includes('perfect') ||
+        history[history.length - 1]?.content.toLowerCase().includes('done') ||
+        history[history.length - 1]?.content.toLowerCase().includes('solved')));
 
-IMPORTANT RULES:
-- Keep responses SHORT (2-3 sentences max)
-- Be warm, friendly, and professional
-- You CAN book appointments!
+    // Build system prompt
+    const systemPrompt = `You are Sammy, a warm and friendly assistant for Dealey Media International. You're here to help customers naturally, like a helpful colleague.
+
+PERSONALITY & TONE:
+- Be conversational and natural - talk like a real person, not a robot
+- Use friendly, casual language (but stay professional)
+- Show genuine interest in helping
+- Keep responses concise (1-2 sentences, max 3)
+- Use natural transitions and follow-ups
+- After solving a problem or completing a task, ALWAYS ask: "Is there anything else I can help you with?" or "What else can I do for you today?"
+
+IMPORTANT: Make customers forget they're talking to a bot. Be engaging, proactive, and genuinely helpful.
 
 SERVICES OFFERED:
 - Social Media Marketing
@@ -92,11 +105,11 @@ SERVICES OFFERED:
 
 BOOKING APPOINTMENTS:
 When someone wants to book an appointment:
-1. Ask for their NAME (if not provided)
-2. Ask for their EMAIL (if not provided)
-3. Ask what SERVICE they're interested in
-4. Ask for preferred DATE and TIME
-5. Confirm all details and say "Your appointment is booked!"
+1. Ask for their NAME (if not provided) - be friendly: "What's your name?"
+2. Ask for their EMAIL (if not provided) - "And what's your email address?"
+3. Ask what SERVICE they're interested in - "Which service are you interested in?"
+4. Ask for preferred DATE and TIME - "When would work best for you?"
+5. Confirm all details naturally and say "Perfect! Your appointment is booked!"
 
 Current booking info for this customer:
 ${JSON.stringify(booking, null, 2)}
@@ -107,7 +120,9 @@ CONTACT INFO:
 - Email: info@dealeymediainternational.com
 - Website: dealeymediainternational.com
 
-Be helpful and guide customers to book appointments!`;
+${isProblemSolved ? 'IMPORTANT: The customer just had a problem solved. Be proactive and ask if they need anything else!' : ''}
+
+Remember: Be natural, helpful, and make them feel like they're talking to a friend who genuinely cares about helping them.`;
 
     const messages: OpenAI.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
@@ -119,8 +134,9 @@ Be helpful and guide customers to book appointments!`;
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages,
-        max_tokens: 200,
-        temperature: 0.7,
+        max_tokens: 120, // Reduced for faster responses
+        temperature: 0.8, // Slightly higher for more natural conversation
+        presence_penalty: 0.1, // Encourage variety in responses
       });
 
       let responseText = response.choices[0].message.content || "I'm here to help!";
@@ -132,7 +148,14 @@ Be helpful and guide customers to book appointments!`;
       if (booking.name && booking.email && booking.service && (booking.date || booking.time)) {
         // Auto-confirm booking
         if (!responseText.toLowerCase().includes('booked') && !responseText.toLowerCase().includes('confirmed')) {
-          responseText = `Perfect! I've booked your appointment:\n\n📋 Name: ${booking.name}\n📧 Email: ${booking.email}\n🎯 Service: ${booking.service}\n📅 Date/Time: ${booking.date || ''} ${booking.time || ''}\n\nYou'll receive a confirmation email shortly. Is there anything else I can help with?`;
+          responseText = `Perfect! I've booked your appointment:\n\n📋 Name: ${booking.name}\n📧 Email: ${booking.email}\n🎯 Service: ${booking.service}\n📅 Date/Time: ${booking.date || ''} ${booking.time || ''}\n\nYou'll receive a confirmation email shortly. Is there anything else I can help you with today?`;
+        } else {
+          // Add follow-up if not already present
+          if (!responseText.toLowerCase().includes('anything else') && 
+              !responseText.toLowerCase().includes('what else') &&
+              !responseText.toLowerCase().includes('need help')) {
+            responseText += " Is there anything else I can help you with?";
+          }
         }
         
         // ALWAYS send confirmation emails & SMS when booking is complete
@@ -161,6 +184,25 @@ Be helpful and guide customers to book appointments!`;
         
         // Clear booking after confirmation
         pendingBookings.set(sessionId, {});
+      }
+
+      // Add proactive follow-up if this seems like a completed task/problem
+      const lowerResponse = responseText.toLowerCase();
+      const isCompletingTask = lowerResponse.includes('done') || 
+                               lowerResponse.includes('complete') ||
+                               lowerResponse.includes('solved') ||
+                               lowerResponse.includes('fixed') ||
+                               lowerResponse.includes('booked') ||
+                               lowerResponse.includes('confirmed') ||
+                               lowerResponse.includes('perfect!') ||
+                               lowerResponse.includes('great!');
+      
+      if (isCompletingTask && 
+          !lowerResponse.includes('anything else') && 
+          !lowerResponse.includes('what else') &&
+          !lowerResponse.includes('need help') &&
+          !lowerResponse.includes('can help')) {
+        responseText += " Is there anything else I can help you with?";
       }
 
       // Save to history
@@ -208,12 +250,25 @@ Be helpful and guide customers to book appointments!`;
     // Extract booking info
     this.extractBookingInfo(message, booking);
 
-    const systemPrompt = `You are Sammy, a friendly AI assistant for Dealey Media International, a digital marketing agency.
+    // Detect if this seems like a problem-solving conversation
+    const isProblemSolved = history.length > 0 && 
+      (history[history.length - 1]?.role === 'assistant' && 
+       (history[history.length - 1]?.content.toLowerCase().includes('great') ||
+        history[history.length - 1]?.content.toLowerCase().includes('perfect') ||
+        history[history.length - 1]?.content.toLowerCase().includes('done') ||
+        history[history.length - 1]?.content.toLowerCase().includes('solved')));
 
-IMPORTANT RULES:
-- Keep responses SHORT (2-3 sentences max)
-- Be warm, friendly, and professional
-- You CAN book appointments!
+    const systemPrompt = `You are Sammy, a warm and friendly assistant for Dealey Media International. You're here to help customers naturally, like a helpful colleague.
+
+PERSONALITY & TONE:
+- Be conversational and natural - talk like a real person, not a robot
+- Use friendly, casual language (but stay professional)
+- Show genuine interest in helping
+- Keep responses concise (1-2 sentences, max 3)
+- Use natural transitions and follow-ups
+- After solving a problem or completing a task, ALWAYS ask: "Is there anything else I can help you with?" or "What else can I do for you today?"
+
+IMPORTANT: Make customers forget they're talking to a bot. Be engaging, proactive, and genuinely helpful.
 
 SERVICES OFFERED:
 - Social Media Marketing
@@ -225,11 +280,11 @@ SERVICES OFFERED:
 
 BOOKING APPOINTMENTS:
 When someone wants to book an appointment:
-1. Ask for their NAME (if not provided)
-2. Ask for their EMAIL (if not provided)
-3. Ask what SERVICE they're interested in
-4. Ask for preferred DATE and TIME
-5. Confirm all details and say "Your appointment is booked!"
+1. Ask for their NAME (if not provided) - be friendly: "What's your name?"
+2. Ask for their EMAIL (if not provided) - "And what's your email address?"
+3. Ask what SERVICE they're interested in - "Which service are you interested in?"
+4. Ask for preferred DATE and TIME - "When would work best for you?"
+5. Confirm all details naturally and say "Perfect! Your appointment is booked!"
 
 Current booking info for this customer:
 ${JSON.stringify(booking, null, 2)}
@@ -238,7 +293,11 @@ If all required info (name, email, service, date/time) is collected, confirm the
 
 CONTACT INFO:
 - Email: info@dealeymediainternational.com
-- Website: dealeymediainternational.com`;
+- Website: dealeymediainternational.com
+
+${isProblemSolved ? 'IMPORTANT: The customer just had a problem solved. Be proactive and ask if they need anything else!' : ''}
+
+Remember: Be natural, helpful, and make them feel like they're talking to a friend who genuinely cares about helping them.`;
 
     const messages: OpenAI.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
@@ -250,8 +309,9 @@ CONTACT INFO:
       const stream = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages,
-        max_tokens: 200,
-        temperature: 0.7,
+        max_tokens: 120, // Reduced for faster responses
+        temperature: 0.8, // Slightly higher for more natural conversation
+        presence_penalty: 0.1, // Encourage variety in responses
         stream: true,
       });
 
@@ -269,9 +329,19 @@ CONTACT INFO:
       if (booking.name && booking.email && booking.service && (booking.date || booking.time)) {
         // Add confirmation message if AI didn't already confirm
         if (!fullText.toLowerCase().includes('booked') && !fullText.toLowerCase().includes('confirmed')) {
-          const bookingConfirm = `\n\n✅ Appointment Booked!\n📋 ${booking.name}\n📧 ${booking.email}\n🎯 ${booking.service}\n📅 ${booking.date || ''} ${booking.time || ''}`;
+          const bookingConfirm = `\n\n✅ Perfect! Your appointment is booked:\n📋 ${booking.name}\n📧 ${booking.email}\n🎯 ${booking.service}\n📅 ${booking.date || ''} ${booking.time || ''}\n\nYou'll receive a confirmation email shortly. Is there anything else I can help you with today?`;
           fullText += bookingConfirm;
           onToken(bookingConfirm);
+        } else {
+          // Add follow-up if not already present
+          const lowerFull = fullText.toLowerCase();
+          if (!lowerFull.includes('anything else') && 
+              !lowerFull.includes('what else') &&
+              !lowerFull.includes('need help')) {
+            const followUp = " Is there anything else I can help you with?";
+            fullText += followUp;
+            onToken(followUp);
+          }
         }
         
         // ALWAYS send confirmation emails & SMS when booking is complete
@@ -301,6 +371,27 @@ CONTACT INFO:
         
         // Clear booking after confirmation
         pendingBookings.set(sessionId, {});
+      }
+
+      // Add proactive follow-up if this seems like a completed task/problem
+      const lowerFull = fullText.toLowerCase();
+      const isCompletingTask = lowerFull.includes('done') || 
+                               lowerFull.includes('complete') ||
+                               lowerFull.includes('solved') ||
+                               lowerFull.includes('fixed') ||
+                               lowerFull.includes('booked') ||
+                               lowerFull.includes('confirmed') ||
+                               lowerFull.includes('perfect!') ||
+                               lowerFull.includes('great!');
+      
+      if (isCompletingTask && 
+          !lowerFull.includes('anything else') && 
+          !lowerFull.includes('what else') &&
+          !lowerFull.includes('need help') &&
+          !lowerFull.includes('can help')) {
+        const followUp = " Is there anything else I can help you with?";
+        fullText += followUp;
+        onToken(followUp);
       }
 
       // Save to history

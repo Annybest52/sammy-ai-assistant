@@ -120,6 +120,15 @@ function WaveformVisualizer({ state, audioLevel }: { state: AssistantState; audi
 export function SammyPremium({ onClose }: SammyPremiumProps) {
   const [state, setState] = useState<AssistantState>('idle');
   const [transcript, setTranscript] = useState('');
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+  
+  useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState('');
@@ -127,6 +136,7 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
   const [audioLevel, setAudioLevel] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [voiceSpeed, setVoiceSpeed] = useState(1.0);
+  const [continuousMode, setContinuousMode] = useState(true);
 
   const socketRef = useRef<Socket | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -136,13 +146,18 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
   const animationFrameRef = useRef<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamingMessageRef = useRef<string>('');
+  const silenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSpeechTimeRef = useRef<number>(0);
+  const hasDetectedSpeechRef = useRef<boolean>(false);
+  const stateRef = useRef<AssistantState>('idle');
+  const transcriptRef = useRef<string>('');
 
   // Scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Audio level analyzer
+  // Audio level analyzer with voice activity detection
   const startAudioAnalysis = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -154,12 +169,44 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
       source.connect(analyserRef.current);
       
       const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+      const SPEECH_THRESHOLD = 0.15; // Audio level threshold for detecting speech
+      const SILENCE_DURATION = 2000; // 2 seconds of silence before auto-send
       
       const analyze = () => {
-        if (analyserRef.current) {
+        if (analyserRef.current && stateRef.current === 'listening') {
           analyserRef.current.getByteFrequencyData(dataArray);
           const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          setAudioLevel(average / 255);
+          const normalizedLevel = average / 255;
+          setAudioLevel(normalizedLevel);
+          
+          // Voice activity detection
+          const now = Date.now();
+          const isSpeaking = normalizedLevel > SPEECH_THRESHOLD;
+          
+          if (isSpeaking) {
+            // User is speaking - reset silence timer
+            lastSpeechTimeRef.current = now;
+            hasDetectedSpeechRef.current = true;
+            
+            // Clear any existing silence timeout
+            if (silenceTimeoutRef.current) {
+              clearTimeout(silenceTimeoutRef.current);
+              silenceTimeoutRef.current = null;
+            }
+          } else if (hasDetectedSpeechRef.current) {
+            // User stopped speaking - start silence timer
+            const silenceDuration = now - lastSpeechTimeRef.current;
+            
+            if (silenceDuration >= SILENCE_DURATION && !silenceTimeoutRef.current) {
+              // Auto-send after silence
+              silenceTimeoutRef.current = setTimeout(() => {
+                if (stateRef.current === 'listening' && transcriptRef.current.trim()) {
+                  stopAndSend();
+                }
+                silenceTimeoutRef.current = null;
+              }, SILENCE_DURATION - silenceDuration);
+            }
+          }
         }
         animationFrameRef.current = requestAnimationFrame(analyze);
       };
@@ -168,7 +215,7 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
     } catch (err) {
       console.error('Audio analysis error:', err);
     }
-  }, []);
+  }, [stopAndSend]);
 
   const stopAudioAnalysis = useCallback(() => {
     if (animationFrameRef.current) {
@@ -177,7 +224,13 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
     if (audioContextRef.current) {
       audioContextRef.current.close();
     }
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
     setAudioLevel(0);
+    lastSpeechTimeRef.current = 0;
+    hasDetectedSpeechRef.current = false;
   }, []);
 
   // Send message to backend
@@ -242,6 +295,8 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
   const startListening = useCallback(() => {
     setError('');
     setTranscript('');
+    hasDetectedSpeechRef.current = false;
+    lastSpeechTimeRef.current = Date.now();
     startAudioAnalysis();
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -261,7 +316,10 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 3;
 
-    recognition.onstart = () => setState('listening');
+    recognition.onstart = () => {
+      setState('listening');
+      lastSpeechTimeRef.current = Date.now();
+    };
 
     recognition.onresult = (event: any) => {
       let text = '';
@@ -278,6 +336,15 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
         .replace(/\bsemi\b/gi, 'Sammy');
       
       setTranscript(text);
+      // Reset silence timer when we get new speech results
+      lastSpeechTimeRef.current = Date.now();
+      hasDetectedSpeechRef.current = true;
+      
+      // Clear and reset silence timeout
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = null;
+      }
     };
 
     recognition.onerror = (event: any) => {
@@ -385,7 +452,17 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
       });
       streamingMessageRef.current = '';
       setState('speaking');
-      speak(data.message, () => setState('idle'));
+      speak(data.message, () => {
+        setState('idle');
+        // Auto-start listening again if continuous mode is enabled
+        if (continuousMode) {
+          setTimeout(() => {
+            if (stateRef.current === 'idle') {
+              startListening();
+            }
+          }, 500);
+        }
+      });
     });
 
     socket.on('agent:error', (data: { message: string }) => {
@@ -402,25 +479,39 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch (e) {}
       }
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+      }
     };
-  }, [speak, stopAudioAnalysis]);
+  }, [speak, stopAudioAnalysis, continuousMode, startListening, state]);
 
   const handleMicClick = () => {
     if (state === 'idle') {
+      // Tap once to start - it will auto-send after silence
       startListening();
     } else if (state === 'listening') {
+      // Manual stop if user wants to send immediately
       stopAndSend();
     } else if (state === 'speaking') {
+      // Stop speaking and go back to idle
       window.speechSynthesis?.cancel();
       setAudioLevel(0);
       setState('idle');
+      // Auto-start listening if continuous mode is on
+      if (continuousMode) {
+        setTimeout(() => {
+          if (stateRef.current === 'idle') {
+            startListening();
+          }
+        }, 300);
+      }
     }
   };
 
   const getStatusText = () => {
     switch (state) {
-      case 'idle': return 'Tap to speak';
-      case 'listening': return 'Listening...';
+      case 'idle': return continuousMode ? 'Tap to start conversation' : 'Tap to speak';
+      case 'listening': return 'Listening... (auto-sends after silence)';
       case 'processing': return 'Thinking...';
       case 'speaking': return 'Speaking...';
     }
@@ -592,27 +683,78 @@ export function SammyPremium({ onClose }: SammyPremiumProps) {
               overflow: 'hidden',
             }}
           >
-            <div style={{ padding: '16px 20px' }}>
-              <label style={{ 
-                color: 'rgba(255,255,255,0.6)', 
-                fontSize: '12px',
-                display: 'block',
-                marginBottom: '8px',
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ 
+                  color: 'rgba(255,255,255,0.6)', 
+                  fontSize: '12px',
+                  display: 'block',
+                  marginBottom: '8px',
+                }}>
+                  Voice Speed: {voiceSpeed.toFixed(1)}x
+                </label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="2"
+                  step="0.1"
+                  value={voiceSpeed}
+                  onChange={(e) => setVoiceSpeed(parseFloat(e.target.value))}
+                  style={{
+                    width: '100%',
+                    accentColor: COLORS[state].primary,
+                  }}
+                />
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px',
+                borderRadius: '12px',
+                background: 'rgba(255,255,255,0.05)',
+                border: `1px solid ${continuousMode ? COLORS.listening.primary : 'rgba(255,255,255,0.1)'}`,
               }}>
-                Voice Speed: {voiceSpeed.toFixed(1)}x
-              </label>
-              <input
-                type="range"
-                min="0.5"
-                max="2"
-                step="0.1"
-                value={voiceSpeed}
-                onChange={(e) => setVoiceSpeed(parseFloat(e.target.value))}
-                style={{
-                  width: '100%',
-                  accentColor: COLORS[state].primary,
-                }}
-              />
+                <div>
+                  <div style={{ color: 'white', fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>
+                    Continuous Mode
+                  </div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px' }}>
+                    {continuousMode ? 'Auto-listens after responses' : 'Tap to start each time'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setContinuousMode(!continuousMode)}
+                  style={{
+                    width: '48px',
+                    height: '28px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: continuousMode ? COLORS.listening.primary : 'rgba(255,255,255,0.2)',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  <motion.div
+                    animate={{
+                      x: continuousMode ? 20 : 2,
+                    }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: '2px',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      background: 'white',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    }}
+                  />
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
