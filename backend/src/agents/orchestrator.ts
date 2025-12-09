@@ -4,6 +4,7 @@ import { MemoryManager } from '../memory/manager.js';
 import { sendBookingConfirmation, sendBookingNotification } from '../services/email.js';
 import { sendBookingSMS, sendBookingNotificationSMS, formatPhoneNumber } from '../services/sms.js';
 import { conversationStorage } from '../storage/conversations.js';
+import { getGHLService } from '../services/ghl.js';
 
 interface ProcessMessageInput {
   message: string;
@@ -173,6 +174,30 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
           phone: booking.phone ? formatPhoneNumber(booking.phone) || booking.phone : undefined
         };
         
+        // Book in GoHighLevel first
+        const ghlService = getGHLService();
+        let ghlAppointmentId: string | undefined;
+        
+        if (ghlService && booking.name && booking.email && booking.service && (booking.date || booking.time)) {
+          console.log('📅 Booking appointment in GoHighLevel...');
+          const ghlResult = await ghlService.bookAppointment(
+            booking.email,
+            booking.name,
+            booking.service,
+            booking.date || 'tomorrow',
+            booking.time || '10 AM',
+            booking.phone,
+            `Booked via Sammy AI Assistant\nService: ${booking.service}`
+          );
+          
+          if (ghlResult.success) {
+            ghlAppointmentId = ghlResult.appointmentId;
+            console.log(`✅ GHL Appointment created: ${ghlAppointmentId}`);
+          } else {
+            console.error(`❌ GHL Booking failed: ${ghlResult.error}`);
+          }
+        }
+        
         Promise.all([
           sendBookingConfirmation(bookingData),
           sendBookingNotification(bookingData),
@@ -183,6 +208,9 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
           console.log(`📧 Business email: ${businessEmail ? 'SENT ✅' : 'FAILED ❌'}`);
           console.log(`📱 Customer SMS: ${customerSMS ? 'SENT ✅' : 'SKIPPED ⏭️'}`);
           console.log(`📱 Business SMS: ${businessSMS ? 'SENT ✅' : 'SKIPPED ⏭️'}`);
+          if (ghlAppointmentId) {
+            console.log(`📅 GHL Appointment: ${ghlAppointmentId} ✅`);
+          }
         }).catch(err => {
           console.error('📧📱 Notification error:', err);
         });
@@ -371,6 +399,30 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
           phone: booking.phone ? formatPhoneNumber(booking.phone) || booking.phone : undefined
         };
         
+        // Book in GoHighLevel first
+        const ghlService = getGHLService();
+        let ghlAppointmentId: string | undefined;
+        
+        if (ghlService && booking.name && booking.email && booking.service && (booking.date || booking.time)) {
+          console.log('📅 Booking appointment in GoHighLevel...');
+          const ghlResult = await ghlService.bookAppointment(
+            booking.email,
+            booking.name,
+            booking.service,
+            booking.date || 'tomorrow',
+            booking.time || '10 AM',
+            booking.phone,
+            `Booked via Sammy AI Assistant\nService: ${booking.service}`
+          );
+          
+          if (ghlResult.success) {
+            ghlAppointmentId = ghlResult.appointmentId;
+            console.log(`✅ GHL Appointment created: ${ghlAppointmentId}`);
+          } else {
+            console.error(`❌ GHL Booking failed: ${ghlResult.error}`);
+          }
+        }
+        
         // Send emails & SMS in background (don't block response)
         Promise.all([
           sendBookingConfirmation(bookingData),
@@ -382,6 +434,9 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
           console.log(`📧 Business email: ${businessEmail ? 'SENT ✅' : 'FAILED ❌'}`);
           console.log(`📱 Customer SMS: ${customerSMS ? 'SENT ✅' : 'SKIPPED ⏭️'}`);
           console.log(`📱 Business SMS: ${businessSMS ? 'SENT ✅' : 'SKIPPED ⏭️'}`);
+          if (ghlAppointmentId) {
+            console.log(`📅 GHL Appointment: ${ghlAppointmentId} ✅`);
+          }
         }).catch(err => {
           console.error('📧📱 Notification error:', err);
         });
