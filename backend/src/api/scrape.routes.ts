@@ -16,6 +16,7 @@ function getScraper(): WebsiteScraper {
 // POST /api/scrape/website - Scrape a website
 router.post('/website', async (req: Request, res: Response) => {
   let scraperInstance: WebsiteScraper | null = null;
+  
   try {
     const { url, maxPages = 10 } = req.body;
 
@@ -30,14 +31,16 @@ router.post('/website', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid URL format' });
     }
 
-    console.log(`🕷️ Starting scrape for: ${url}`);
+    console.log(`🕷️ Starting scrape for: ${url} (maxPages: ${maxPages})`);
 
     // Initialize scraper with error handling
     try {
+      console.log('🔧 Initializing Puppeteer...');
       scraperInstance = getScraper();
       await scraperInstance.initialize();
+      console.log('✅ Puppeteer initialized successfully');
     } catch (initError: any) {
-      console.error('Failed to initialize scraper:', initError);
+      console.error('❌ Failed to initialize scraper:', initError);
       return res.status(500).json({
         success: false,
         error: `Failed to initialize browser: ${initError.message}`,
@@ -64,7 +67,7 @@ router.post('/website', async (req: Request, res: Response) => {
       })),
     });
   } catch (error: any) {
-    console.error('Scrape error:', error);
+    console.error('❌ Scrape error:', error);
     const errorMessage = error?.message || error?.toString() || 'Unknown error';
     const errorStack = error?.stack || '';
     
@@ -78,12 +81,22 @@ router.post('/website', async (req: Request, res: Response) => {
     }
     
     // Return detailed error for debugging
-    res.status(500).json({
-      success: false,
-      error: errorMessage,
-      errorType: error?.name || 'Error',
-      details: errorStack.substring(0, 500), // Limit stack trace length
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: errorMessage,
+        errorType: error?.name || 'Error',
+        details: errorStack.substring(0, 500), // Limit stack trace length
+      });
+    } else {
+      res.write(JSON.stringify({
+        success: false,
+        error: errorMessage,
+        errorType: error?.name || 'Error',
+        details: errorStack.substring(0, 500),
+      }));
+      res.end();
+    }
   }
 });
 

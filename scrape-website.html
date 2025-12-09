@@ -231,6 +231,10 @@
             addLog(`Max Pages: ${maxPages}`);
             
             try {
+                // Add timeout for long-running requests (5 minutes)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes
+                
                 const response = await fetch(`${railwayUrl}/api/scrape/website`, {
                     method: 'POST',
                     headers: {
@@ -239,8 +243,11 @@
                     body: JSON.stringify({
                         url: websiteUrl,
                         maxPages: maxPages
-                    })
+                    }),
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
 
                 const data = await response.json();
                 
