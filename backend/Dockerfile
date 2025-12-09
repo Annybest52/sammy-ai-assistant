@@ -1,13 +1,17 @@
-# Backend Dockerfile - v2 (force rebuild)
+# Backend Dockerfile - v3
 FROM node:20-slim
 
 WORKDIR /app
+
+# Skip puppeteer chromium download (not needed in production)
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 # Copy package files
 COPY package.json ./
 
 # Install dependencies (with legacy peer deps to avoid conflicts)
-RUN npm install --legacy-peer-deps
+RUN npm install --legacy-peer-deps --ignore-scripts
 
 # Copy source
 COPY . .
