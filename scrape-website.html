@@ -230,11 +230,39 @@
             addLog(`Website URL: ${websiteUrl}`);
             addLog(`Max Pages: ${maxPages}`);
             
+            // First, test if Puppeteer is working
+            addLog('Testing Puppeteer initialization...');
             try {
-                // Add timeout for long-running requests (5 minutes)
+                const testResponse = await fetch(`${railwayUrl}/api/scrape/test`);
+                const testData = await testResponse.json();
+                if (testData.success) {
+                    addLog('✅ Puppeteer test passed');
+                } else {
+                    addLog(`❌ Puppeteer test failed: ${testData.error}`);
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ Puppeteer Test Failed!<br><br>Error: ${testData.error}<br><br>This means Chromium is not properly installed on Railway.<br>Check Railway logs for details.`;
+                    scrapeBtn.disabled = false;
+                    scrapeBtn.textContent = '🚀 Start Scraping';
+                    return;
+                }
+            } catch (testError) {
+                addLog(`❌ Puppeteer test error: ${testError.message}`);
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Cannot test Puppeteer!<br><br>Error: ${testError.message}<br><br>Check if backend is running.`;
+                scrapeBtn.disabled = false;
+                scrapeBtn.textContent = '🚀 Start Scraping';
+                return;
+            }
+            
+            try {
+                // Add timeout for long-running requests (10 minutes for scraping)
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes
+                const timeoutId = setTimeout(() => {
+                    controller.abort();
+                    addLog('⏱️ Request timeout after 10 minutes');
+                }, 600000); // 10 minutes
                 
+                addLog('Sending scrape request...');
                 const response = await fetch(`${railwayUrl}/api/scrape/website`, {
                     method: 'POST',
                     headers: {

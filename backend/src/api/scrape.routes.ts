@@ -158,4 +158,28 @@ router.get('/status', (req: Request, res: Response) => {
   });
 });
 
+// GET /api/scrape/test - Test if Puppeteer can initialize
+router.get('/test', async (req: Request, res: Response) => {
+  try {
+    console.log('🧪 Testing Puppeteer initialization...');
+    const scraperInstance = getScraper();
+    await scraperInstance.initialize();
+    console.log('✅ Puppeteer test successful');
+    await scraperInstance.close();
+    
+    res.json({
+      success: true,
+      message: 'Puppeteer initialized successfully',
+      chromiumPath: process.env.PUPPETEER_EXECUTABLE_PATH || 'default',
+    });
+  } catch (error: any) {
+    console.error('❌ Puppeteer test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error?.message || 'Failed to initialize Puppeteer',
+      details: error?.stack?.substring(0, 500),
+    });
+  }
+});
+
 export { router as scrapeRouter };
