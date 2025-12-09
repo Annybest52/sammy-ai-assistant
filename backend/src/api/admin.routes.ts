@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { conversationStorage } from '../storage/conversations.js';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 // GET /api/admin/conversations - Get all conversations
 router.get('/conversations', async (req: Request, res: Response) => {

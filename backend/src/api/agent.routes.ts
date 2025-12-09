@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { MemoryManager } from '../memory/manager.js';
 import { v4 as uuid } from 'uuid';
 
-const router = Router();
+const router: ExpressRouter = Router();
 const memoryManager = new MemoryManager();
 
 // Lazy initialization - only create orchestrator when needed

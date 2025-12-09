@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { CalendarService } from '../services/calendar.js';
 
-const router = Router();
+const router: ExpressRouter = Router();
 const calendarService = new CalendarService();
 
 // GET /api/calendar/auth - Get OAuth URL

@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { WebsiteScraper } from '../scraper/website.js';
 
-const router = Router();
+const router: ExpressRouter = Router();
 // Lazy-load scraper only when needed (not at module load time)
 let scraper: WebsiteScraper | null = null;
 

@@ -449,7 +449,7 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
             ghlError = ghlResult.error;
             console.error(`❌ GHL Booking failed: ${ghlError}`);
             // Update response to mention availability issue
-            if (ghlError.includes('not available') || ghlError.includes('already an appointment')) {
+            if (ghlError && (ghlError.includes('not available') || ghlError.includes('already an appointment'))) {
               fullText = `I'm sorry, but that time slot is already booked. Would you like to try a different time? ${fullText}`;
               onToken(`I'm sorry, but that time slot is already booked. Would you like to try a different time? `);
             }

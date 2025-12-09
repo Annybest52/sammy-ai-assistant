@@ -41,7 +41,7 @@ export class CalendarService {
     });
   }
 
-  async getTokensFromCode(code: string) {
+  async getTokensFromCode(code: string): Promise<any> {
     const { tokens } = await this.oauth2Client.getToken(code);
     this.setCredentials(tokens as { access_token: string; refresh_token?: string });
     return tokens;
