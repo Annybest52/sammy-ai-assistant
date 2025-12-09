@@ -17,11 +17,22 @@ interface ConversationMessage {
 }
 
 export class MemoryManager {
-  private supabase: SupabaseClient;
+  private supabase: SupabaseClient | null = null;
   private inMemoryCache: Map<string, Message[]> = new Map();
 
   constructor() {
-    this.supabase = createClient(config.supabase.url, config.supabase.serviceKey);
+    // Only initialize Supabase if credentials are provided
+    if (config.supabase.url && config.supabase.serviceKey) {
+      try {
+        this.supabase = createClient(config.supabase.url, config.supabase.serviceKey);
+        console.log('✅ Supabase connected');
+      } catch (error) {
+        console.warn('⚠️ Supabase connection failed, using in-memory storage');
+        this.supabase = null;
+      }
+    } else {
+      console.log('ℹ️ Supabase not configured, using in-memory storage');
+    }
   }
 
   async getConversationHistory(sessionId: string, limit: number = 20): Promise<Message[]> {
@@ -29,6 +40,11 @@ export class MemoryManager {
     const cached = this.inMemoryCache.get(sessionId);
     if (cached && cached.length > 0) {
       return cached.slice(-limit);
+    }
+
+    // If no Supabase, return empty (will use cache going forward)
+    if (!this.supabase) {
+      return [];
     }
 
     try {
@@ -76,7 +92,9 @@ export class MemoryManager {
       timestamp: new Date(),
     });
 
-    // Persist to Supabase
+    // Persist to Supabase if available
+    if (!this.supabase) return;
+
     try {
       const { error } = await this.supabase.from('conversations').insert({
         session_id: sessionId,
@@ -97,6 +115,8 @@ export class MemoryManager {
   async clearSession(sessionId: string): Promise<void> {
     this.inMemoryCache.delete(sessionId);
     
+    if (!this.supabase) return;
+
     try {
       await this.supabase
         .from('conversations')
@@ -118,5 +138,3 @@ export class MemoryManager {
     return `Conversation with ${history.length} messages. User discussed: ${userMessages.slice(-5).join('; ')}`;
   }
 }
-
-
