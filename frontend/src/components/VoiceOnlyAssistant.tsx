@@ -105,6 +105,31 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
         text += event.results[i][0].transcript;
       }
       
+      // Fix email addresses - remove spaces in email patterns
+      // Pattern: word(s) + @ + word(s) + . + word(s)
+      // Example: "mecie annie 2020 @gmail.com" -> "mecieannie2020@gmail.com"
+      text = text.replace(
+        /\b([a-z0-9]+(?:\s+[a-z0-9]+)*)\s*@\s*([a-z]+(?:\s+[a-z]+)*)\s*\.\s*([a-z]+(?:\s+[a-z]+)*)\b/gi,
+        (_match, localPart, domain, tld) => {
+          // Remove all spaces from email parts
+          const cleanLocal = localPart.replace(/\s+/g, '').toLowerCase();
+          const cleanDomain = domain.replace(/\s+/g, '').toLowerCase();
+          const cleanTld = tld.replace(/\s+/g, '').toLowerCase();
+          return `${cleanLocal}@${cleanDomain}.${cleanTld}`;
+        }
+      );
+      
+      // Also handle cases where @ might be said as "at"
+      text = text.replace(
+        /\b([a-z0-9]+(?:\s+[a-z0-9]+)*)\s+(?:at|@)\s+([a-z]+(?:\s+[a-z]+)*)\s+(?:dot|\.)\s+([a-z]+(?:\s+[a-z]+)*)\b/gi,
+        (_match, localPart, domain, tld) => {
+          const cleanLocal = localPart.replace(/\s+/g, '').toLowerCase();
+          const cleanDomain = domain.replace(/\s+/g, '').toLowerCase();
+          const cleanTld = tld.replace(/\s+/g, '').toLowerCase();
+          return `${cleanLocal}@${cleanDomain}.${cleanTld}`;
+        }
+      );
+      
       // Auto-correct common misheard words
       text = text
         .replace(/\bhi automation\b/gi, 'AI automation')
