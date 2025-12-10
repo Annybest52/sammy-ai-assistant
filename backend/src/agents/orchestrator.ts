@@ -634,6 +634,9 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
       /(?:my name is|i'm|i am|this is|call me|name's|name is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
       /(?:i'm|i am)\s+([A-Z][a-z]+)/i,
       /(?:name)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+      // Handle "is [Name]" pattern (e.g., "is Messi")
+      /^is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+      /\bis\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/i,
     ];
     
     // Accent-specific name patterns
@@ -721,9 +724,18 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
     
     // Accent-specific email corrections and common misrecognitions
     if (booking.email) {
+      // Remove common prefixes that get added by speech recognition
+      booking.email = booking.email
+        .replace(/^addressis/gi, '')  // "addressismerciani" -> "merciani"
+        .replace(/^address\s+is/gi, '')
+        .replace(/^email\s+is/gi, '')
+        .replace(/^my\s+email\s+is/gi, '')
+        .replace(/^the\s+email\s+is/gi, '');
+      
       // Common email misrecognitions (fix before other corrections)
       booking.email = booking.email
         // Common name misrecognitions in emails
+        .replace(/merciani/gi, 'mercyanny')  // "merciani" -> "mercyanny"
         .replace(/messiani/gi, 'mercyanny')  // "messiani" -> "mercyanny"
         .replace(/messie/gi, 'mercy')
         .replace(/mersie/gi, 'mercy')
