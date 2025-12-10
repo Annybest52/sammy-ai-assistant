@@ -30,27 +30,47 @@ export class GHLService {
   // Create or get contact by email
   async createOrGetContact(contact: GHLContact): Promise<string | null> {
     try {
+      console.log('🔵 Searching for existing contact...');
+      console.log('   Email:', contact.email);
+      
       // First, try to find existing contact
-      const searchResponse = await fetch(
-        `${this.baseUrl}/contacts/search?locationId=${this.locationId}&email=${encodeURIComponent(contact.email)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-            'Version': '2021-07-28',
-          },
-        }
-      );
+      const searchUrl = `${this.baseUrl}/contacts/search?locationId=${this.locationId}&email=${encodeURIComponent(contact.email)}`;
+      const searchResponse = await fetch(searchUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'Version': '2021-07-28',
+        },
+      });
+
+      console.log('   Search response status:', searchResponse.status);
 
       if (searchResponse.ok) {
         const searchData = await searchResponse.json() as { contacts?: Array<{ id: string }> };
         if (searchData.contacts && searchData.contacts.length > 0) {
+          console.log(`✅ Found existing contact: ${searchData.contacts[0].id}`);
           return searchData.contacts[0].id;
         }
+        console.log('   No existing contact found, creating new one...');
+      } else {
+        const errorText = await searchResponse.text();
+        console.warn('   Search failed (will try to create):', errorText);
       }
 
       // Contact doesn't exist, create new one
+      const contactData = {
+        locationId: this.locationId,
+        email: contact.email,
+        firstName: contact.firstName || '',
+        lastName: contact.lastName || '',
+        phone: contact.phone || '',
+        source: contact.source || 'Sammy AI Assistant',
+      };
+      
+      console.log('🔵 Creating new contact...');
+      console.log('   Contact data:', JSON.stringify(contactData, null, 2));
+      
       const createResponse = await fetch(
         `${this.baseUrl}/contacts/`,
         {
@@ -60,26 +80,41 @@ export class GHLService {
             'Content-Type': 'application/json',
             'Version': '2021-07-28',
           },
-          body: JSON.stringify({
-            locationId: this.locationId,
-            email: contact.email,
-            firstName: contact.firstName || '',
-            lastName: contact.lastName || '',
-            phone: contact.phone || '',
-            source: contact.source || 'Sammy AI Assistant',
-          }),
+          body: JSON.stringify(contactData),
         }
       );
 
+      console.log('   Create response status:', createResponse.status, createResponse.statusText);
+
       if (createResponse.ok) {
-        const contactData = await createResponse.json() as { contact?: { id: string } };
-        return contactData.contact?.id || null;
+        const responseData = await createResponse.json() as { contact?: { id: string } };
+        const contactId = responseData.contact?.id || null;
+        if (contactId) {
+          console.log(`✅ Contact created successfully: ${contactId}`);
+        } else {
+          console.warn('⚠️ Contact created but no ID in response');
+        }
+        return contactId;
       }
 
-      console.error('Failed to create contact:', await createResponse.text());
+      const errorText = await createResponse.text();
+      console.error('❌ Failed to create contact:');
+      console.error('   Status:', createResponse.status);
+      console.error('   Error:', errorText);
+      
+      if (createResponse.status === 400) {
+        console.error('   → Invalid contact data (check email format, required fields)');
+      } else if (createResponse.status === 401) {
+        console.error('   → API key is invalid');
+      } else if (createResponse.status === 403) {
+        console.error('   → API key does not have permission to create contacts');
+      }
+      
       return null;
-    } catch (error) {
-      console.error('GHL contact creation error:', error);
+    } catch (error: any) {
+      console.error('❌ GHL contact creation exception:', error);
+      console.error('   Message:', error.message);
+      console.error('   Stack:', error.stack);
       return null;
     }
   }
@@ -139,35 +174,72 @@ export class GHLService {
   // Get calendar ID (you may need to configure this)
   async getCalendarId(calendarName?: string): Promise<string | null> {
     try {
-      const response = await fetch(
-        `${this.baseUrl}/calendars/?locationId=${this.locationId}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-            'Version': '2021-07-28',
-          },
-        }
-      );
+      const url = `${this.baseUrl}/calendars/?locationId=${this.locationId}`;
+      console.log('🔵 Fetching calendars from GHL...');
+      console.log('   URL:', url);
+      console.log('   Location ID:', this.locationId);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'Version': '2021-07-28',
+        },
+      });
+
+      console.log('   Response status:', response.status, response.statusText);
 
       if (response.ok) {
         const data = await response.json() as { calendars?: Array<{ id: string; name?: string }> };
         const calendars = data.calendars || [];
         
+        console.log(`   Found ${calendars.length} calendar(s):`);
+        calendars.forEach((cal: any, idx: number) => {
+          console.log(`     [${idx + 1}] ${cal.name || 'Unnamed'} (ID: ${cal.id})`);
+        });
+        
+        if (calendars.length === 0) {
+          console.error('❌ No calendars found in GHL!');
+          console.error('   → You need to create a calendar in GHL first.');
+          console.error('   → Go to GHL Dashboard → Calendar → Create Calendar');
+          return null;
+        }
+        
         if (calendarName) {
           const calendar = calendars.find((c: any) => 
             c.name?.toLowerCase().includes(calendarName.toLowerCase())
           );
-          return calendar?.id || calendars[0]?.id || null;
+          if (calendar) {
+            console.log(`✅ Using calendar: ${calendar.name} (ID: ${calendar.id})`);
+            return calendar.id;
+          }
+          console.warn(`⚠️ Calendar "${calendarName}" not found, using first calendar`);
         }
         
-        return calendars[0]?.id || null;
+        const selectedCalendar = calendars[0];
+        console.log(`✅ Using first calendar: ${selectedCalendar.name || 'Unnamed'} (ID: ${selectedCalendar.id})`);
+        return selectedCalendar.id;
       }
 
+      const errorText = await response.text();
+      console.error('❌ Failed to fetch calendars:');
+      console.error('   Status:', response.status);
+      console.error('   Error:', errorText);
+      
+      if (response.status === 401) {
+        console.error('   → API key is invalid or expired');
+      } else if (response.status === 403) {
+        console.error('   → API key does not have permission to access calendars');
+      } else if (response.status === 404) {
+        console.error('   → Location ID is incorrect');
+      }
+      
       return null;
-    } catch (error) {
-      console.error('GHL get calendar error:', error);
+    } catch (error: any) {
+      console.error('❌ GHL get calendar exception:', error);
+      console.error('   Message:', error.message);
+      console.error('   Stack:', error.stack);
       return null;
     }
   }
