@@ -209,24 +209,63 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
         const ghlService = getGHLService();
         let ghlAppointmentId: string | undefined;
         
+        console.log('🔍 Checking GHL booking conditions...');
+        console.log('  - GHL Service:', ghlService ? '✅ Initialized' : '❌ Not initialized (check GHL_API_KEY and GHL_LOCATION_ID)');
+        console.log('  - Booking data:', JSON.stringify({
+          name: booking.name,
+          email: booking.email,
+          service: booking.service,
+          date: booking.date,
+          time: booking.time,
+          phone: booking.phone,
+        }, null, 2));
+        
+        if (!ghlService) {
+          console.error('❌ GHL Service not available. Check Railway environment variables:');
+          console.error('   - GHL_API_KEY:', process.env.GHL_API_KEY ? '✅ Set' : '❌ Missing');
+          console.error('   - GHL_LOCATION_ID:', process.env.GHL_LOCATION_ID ? '✅ Set' : '❌ Missing');
+        }
+        
         if (ghlService && booking.name && booking.email && booking.service && (booking.date || booking.time)) {
-          console.log('📅 Booking appointment in GoHighLevel...');
-          const ghlResult = await ghlService.bookAppointment(
-            booking.email,
-            booking.name,
-            booking.service,
-            booking.date || 'tomorrow',
-            booking.time || '10 AM',
-            booking.phone,
-            `Booked via Sammy AI Assistant\nService: ${booking.service}`
-          );
+          console.log('📅 Attempting to book appointment in GoHighLevel...');
+          console.log(`   Email: ${booking.email}`);
+          console.log(`   Name: ${booking.name}`);
+          console.log(`   Service: ${booking.service}`);
+          console.log(`   Date: ${booking.date || 'tomorrow'}`);
+          console.log(`   Time: ${booking.time || '10 AM'}`);
           
-          if (ghlResult.success) {
-            ghlAppointmentId = ghlResult.appointmentId;
-            console.log(`✅ GHL Appointment created: ${ghlAppointmentId}`);
-          } else {
-            console.error(`❌ GHL Booking failed: ${ghlResult.error}`);
+          try {
+            const ghlResult = await ghlService.bookAppointment(
+              booking.email,
+              booking.name,
+              booking.service,
+              booking.date || 'tomorrow',
+              booking.time || '10 AM',
+              booking.phone,
+              `Booked via Sammy AI Assistant\nService: ${booking.service}`
+            );
+            
+            if (ghlResult.success) {
+              ghlAppointmentId = ghlResult.appointmentId;
+              console.log(`✅✅✅ GHL Appointment SUCCESSFULLY created!`);
+              console.log(`   Appointment ID: ${ghlAppointmentId}`);
+              console.log(`   Contact ID: ${ghlResult.contactId || 'N/A'}`);
+            } else {
+              console.error(`❌❌❌ GHL Booking FAILED:`);
+              console.error(`   Error: ${ghlResult.error}`);
+              console.error(`   This appointment was NOT saved to GHL!`);
+            }
+          } catch (error: any) {
+            console.error('❌❌❌ GHL Booking EXCEPTION:', error);
+            console.error('   Stack:', error.stack);
           }
+        } else {
+          console.warn('⚠️ GHL booking skipped - missing required data:');
+          if (!ghlService) console.warn('   - GHL Service not initialized');
+          if (!booking.name) console.warn('   - Missing: name');
+          if (!booking.email) console.warn('   - Missing: email');
+          if (!booking.service) console.warn('   - Missing: service');
+          if (!booking.date && !booking.time) console.warn('   - Missing: date or time');
         }
         
         Promise.all([

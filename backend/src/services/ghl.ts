@@ -175,6 +175,20 @@ export class GHLService {
   // Create appointment in GHL
   async createAppointment(appointment: GHLAppointment): Promise<{ success: boolean; appointmentId?: string; error?: string }> {
     try {
+      const requestBody = {
+        locationId: this.locationId,
+        contactId: appointment.contactId,
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
+        title: appointment.title,
+        assignedTo: appointment.assignedTo,
+        notes: appointment.notes,
+      };
+      
+      console.log('🔵 Sending appointment to GHL API...');
+      console.log('   URL:', `${this.baseUrl}/calendars/${appointment.calendarId}/appointments`);
+      console.log('   Request body:', JSON.stringify(requestBody, null, 2));
+      
       const response = await fetch(
         `${this.baseUrl}/calendars/${appointment.calendarId}/appointments`,
         {
@@ -184,34 +198,39 @@ export class GHLService {
             'Content-Type': 'application/json',
             'Version': '2021-07-28',
           },
-          body: JSON.stringify({
-            locationId: this.locationId,
-            contactId: appointment.contactId,
-            startTime: appointment.startTime,
-            endTime: appointment.endTime,
-            title: appointment.title,
-            assignedTo: appointment.assignedTo,
-            notes: appointment.notes,
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
+      console.log('   Response status:', response.status, response.statusText);
+
       if (response.ok) {
         const data = await response.json() as { appointment?: { id: string } };
+        console.log('   Response data:', JSON.stringify(data, null, 2));
+        const appointmentId = data.appointment?.id;
+        if (appointmentId) {
+          console.log('✅✅✅ GHL API returned appointment ID:', appointmentId);
+        } else {
+          console.warn('⚠️ GHL API response OK but no appointment ID in response');
+        }
         return {
           success: true,
-          appointmentId: data.appointment?.id,
+          appointmentId,
         };
       }
 
       const errorText = await response.text();
-      console.error('GHL appointment creation failed:', errorText);
+      console.error('❌ GHL appointment creation failed:');
+      console.error('   Status:', response.status);
+      console.error('   Error response:', errorText);
       return {
         success: false,
-        error: errorText,
+        error: `GHL API error (${response.status}): ${errorText}`,
       };
     } catch (error: any) {
-      console.error('GHL appointment error:', error);
+      console.error('❌ GHL appointment exception:', error);
+      console.error('   Message:', error.message);
+      console.error('   Stack:', error.stack);
       return {
         success: false,
         error: error.message || 'Unknown error',
@@ -230,12 +249,22 @@ export class GHLService {
     notes?: string
   ): Promise<{ success: boolean; appointmentId?: string; contactId?: string; error?: string }> {
     try {
+      console.log('🔵 GHL bookAppointment called with:');
+      console.log('   Email:', email);
+      console.log('   Name:', name);
+      console.log('   Service:', service);
+      console.log('   Date:', date);
+      console.log('   Time:', time);
+      console.log('   Phone:', phone || 'not provided');
+      
       // Parse name
       const nameParts = name.trim().split(' ');
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
+      console.log('   Parsed name - First:', firstName, 'Last:', lastName);
 
       // Create or get contact
+      console.log('🔵 Creating/getting contact...');
       const contactId = await this.createOrGetContact({
         email,
         firstName,
@@ -245,48 +274,62 @@ export class GHLService {
       });
 
       if (!contactId) {
+        console.error('❌ Failed to create or find contact');
         return {
           success: false,
           error: 'Failed to create or find contact',
         };
       }
+      console.log('✅ Contact ID:', contactId);
 
       // Get calendar ID
+      console.log('🔵 Getting calendar ID...');
       const calendarId = await this.getCalendarId();
       if (!calendarId) {
+        console.error('❌ No calendar found in GHL');
         return {
           success: false,
           error: 'No calendar found. Please configure a calendar in GHL.',
         };
       }
+      console.log('✅ Calendar ID:', calendarId);
 
       // Parse date and time
+      console.log('🔵 Parsing date/time...');
+      console.log('   Date string:', date);
+      console.log('   Time string:', time);
       const startDateTime = this.parseDateTime(date, time);
       if (!startDateTime) {
+        console.error('❌ Failed to parse date/time');
         return {
           success: false,
-          error: 'Invalid date or time format',
+          error: `Invalid date or time format. Received: date="${date}", time="${time}"`,
         };
       }
+      console.log('✅ Parsed start time:', startDateTime.toISOString());
 
       // Create appointment (default 1 hour duration)
       const endDateTime = new Date(startDateTime);
       endDateTime.setHours(endDateTime.getHours() + 1);
 
       // Check availability BEFORE booking
+      console.log('🔵 Checking availability...');
       const availability = await this.checkAvailability(
         calendarId,
         startDateTime.toISOString(),
         endDateTime.toISOString()
       );
+      console.log('   Availability:', availability.available ? '✅ Available' : '❌ Not available');
 
       if (!availability.available) {
+        console.error('❌ Time slot not available');
         return {
           success: false,
           error: `This time slot is not available. There's already an appointment scheduled at that time.`,
         };
       }
 
+      console.log('🔵 Creating appointment in GHL...');
       const appointmentResult = await this.createAppointment({
         calendarId,
         contactId,
@@ -298,6 +341,8 @@ export class GHLService {
       });
 
       if (appointmentResult.success) {
+        console.log('✅✅✅ Appointment created successfully!');
+        console.log('   Appointment ID:', appointmentResult.appointmentId);
         return {
           success: true,
           appointmentId: appointmentResult.appointmentId,
@@ -305,6 +350,7 @@ export class GHLService {
         };
       }
 
+      console.error('❌ Appointment creation failed:', appointmentResult.error);
       return appointmentResult;
     } catch (error: any) {
       console.error('GHL book appointment error:', error);
@@ -318,6 +364,7 @@ export class GHLService {
   // Parse date and time strings into Date object
   private parseDateTime(dateStr: string, timeStr: string): Date | null {
     try {
+      console.log('   🔵 parseDateTime called with:', { dateStr, timeStr });
       // Handle relative dates
       let date = new Date();
       
