@@ -364,6 +364,16 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
 
     // Extract booking info with accent-specific handling
     this.extractBookingInfo(message, booking, accent);
+    
+    // Debug: Log booking state after extraction
+    console.log('🔍 Booking state after extraction (stream):', JSON.stringify({
+      name: booking.name,
+      email: booking.email,
+      service: booking.service,
+      date: booking.date,
+      time: booking.time,
+      phone: booking.phone,
+    }, null, 2));
 
     // Detect if this seems like a problem-solving conversation
     const isProblemSolved = history.length > 0 && 
@@ -722,7 +732,7 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
 
     // Extract service interest
     if (lower.includes('social media')) booking.service = 'Social Media Marketing';
-    else if (lower.includes('seo')) booking.service = 'SEO';
+    else if (lower.includes('seo') || lower.includes('optimization') || lower.includes('search engine')) booking.service = 'SEO';
     else if (lower.includes('web design') || lower.includes('website')) booking.service = 'Web Design';
     else if (lower.includes('content')) booking.service = 'Content Creation';
     else if (lower.includes('ppc') || lower.includes('ads') || lower.includes('advertising')) booking.service = 'PPC Advertising';
@@ -735,12 +745,42 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
     else if (lower.includes('wednesday')) booking.date = 'Wednesday';
     else if (lower.includes('thursday')) booking.date = 'Thursday';
     else if (lower.includes('friday')) booking.date = 'Friday';
+    else if (lower.includes('saturday')) booking.date = 'Saturday';
+    else if (lower.includes('sunday')) booking.date = 'Sunday';
 
-    // Extract time
-    const timeMatch = message.match(/\b(\d{1,2})\s*(am|pm|AM|PM)\b/);
-    if (timeMatch) {
+    // Extract time - handle multiple formats
+    // Format 1: "2 PM", "2pm", "2 AM"
+    let timeMatch = message.match(/\b(\d{1,2})\s*(am|pm|AM|PM)\b/i);
+    
+    // Format 2: "2:00 PM", "2:00pm", "2:30 PM"
+    if (!timeMatch) {
+      timeMatch = message.match(/\b(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)\b/i);
+      if (timeMatch) {
+        booking.time = `${timeMatch[1]}:${timeMatch[2]} ${timeMatch[3].toUpperCase()}`;
+      }
+    } else {
       booking.time = `${timeMatch[1]} ${timeMatch[2].toUpperCase()}`;
     }
+    
+    // Format 3: "2:00 p.m.", "2:00 P.M." (with periods)
+    if (!booking.time) {
+      timeMatch = message.match(/\b(\d{1,2}):(\d{2})\s*(a\.?m\.?|p\.?m\.?|A\.?M\.?|P\.?M\.?)\b/i);
+      if (timeMatch) {
+        const period = timeMatch[3].replace(/\./g, '').toUpperCase();
+        booking.time = `${timeMatch[1]}:${timeMatch[2]} ${period}`;
+      }
+    }
+    
+    // Format 4: "2 p.m.", "2 P.M." (with periods, no colon)
+    if (!booking.time) {
+      timeMatch = message.match(/\b(\d{1,2})\s*(a\.?m\.?|p\.?m\.?|A\.?M\.?|P\.?M\.?)\b/i);
+      if (timeMatch) {
+        const period = timeMatch[2].replace(/\./g, '').toUpperCase();
+        booking.time = `${timeMatch[1]} ${period}`;
+      }
+    }
+    
+    // Time ranges
     if (lower.includes('morning')) booking.time = 'Morning (9-12)';
     else if (lower.includes('afternoon')) booking.time = 'Afternoon (12-5)';
     else if (lower.includes('evening')) booking.time = 'Evening (5-7)';
