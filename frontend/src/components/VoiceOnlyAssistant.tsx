@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { getAccentPreference } from '../utils/accentConfig';
 
 const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
   const [state, setState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
+  const accent = getAccentPreference(); // Auto-detect accent from browser
   
   const socketRef = useRef<Socket | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -91,8 +93,8 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.maxAlternatives = 3;
+    recognition.lang = accent; // Use selected accent
+    recognition.maxAlternatives = 5; // Get more alternatives for better accuracy
 
     recognition.onstart = () => {
       setState('listening');
@@ -130,13 +132,41 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
         }
       );
       
-      // Auto-correct common misheard words
+      // Accent-specific corrections based on detected accent
+      const accentCode = accent;
+      
+      // Universal corrections
       text = text
         .replace(/\bhi automation\b/gi, 'AI automation')
         .replace(/\bhi agent\b/gi, 'AI agent')
         .replace(/\bhigh automation\b/gi, 'AI automation')
         .replace(/\bsammi\b/gi, 'Sammy')
-        .replace(/\bsemi\b/gi, 'Sammy');
+        .replace(/\bsemi\b/gi, 'Sammy')
+        .replace(/\bsammy\b/gi, 'Sammy')
+        .replace(/\bgmail dot com\b/gi, 'gmail.com')
+        .replace(/\byahoo dot com\b/gi, 'yahoo.com')
+        .replace(/\bhotmail dot com\b/gi, 'hotmail.com');
+      
+      // Accent-specific corrections
+      if (accentCode === 'en-NG') {
+        // Nigerian English corrections
+        text = text
+          .replace(/\bna me be\b/gi, 'my name is')
+          .replace(/\bmy name na\b/gi, 'my name is')
+          .replace(/\bi be\b/gi, 'I am')
+          .replace(/\bme na\b/gi, 'my name is');
+      } else if (accentCode === 'en-IN' || accentCode === 'en-PK') {
+        // Indian/Pakistani English corrections
+        text = text
+          .replace(/\bmera naam\b/gi, 'my name is')
+          .replace(/\bmera name\b/gi, 'my name is')
+          .replace(/\bname hai\b/gi, 'name is');
+      } else if (accentCode === 'en-GB') {
+        // British English corrections
+        text = text
+          .replace(/\bi'm called\b/gi, "I'm called")
+          .replace(/\bmy name's\b/gi, "my name is");
+      }
       
       transcriptRef.current = text;
       lastSpeechTimeRef.current = Date.now();
@@ -192,6 +222,11 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
 
     socket.on('connect', () => {
       console.log('✅ Connected to server, speaking greeting...');
+      console.log('🌍 Using accent:', accent);
+      
+      // Send accent preference to backend
+      socket.emit('set:accent', { accent });
+      
       const greeting = "Hello! I'm Sammy, your AI assistant. How can I help you today?";
       setState('speaking');
       

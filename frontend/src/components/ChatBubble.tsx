@@ -32,43 +32,45 @@ export function ChatBubble() {
         }}
         onClick={handleOrbClick}
       >
-            {/* Outer Glow Rings */}
+            {/* Outer Glow Rings - iPhone-style soft pulsing */}
             <motion.div
               animate={{
-                scale: isHovered ? [1, 1.2, 1] : [1, 1.1, 1],
-                opacity: [0.3, 0.6, 0.3],
+                scale: isHovered ? [1, 1.25, 1] : [1, 1.12, 1],
+                opacity: [0.25, 0.5, 0.25],
               }}
               transition={{
-                duration: 2,
+                duration: 2.5,
                 repeat: Infinity,
-                ease: 'easeInOut',
+                ease: [0.4, 0, 0.6, 1],
               }}
               style={{
                 position: 'absolute',
-                inset: '-20px',
+                inset: '-24px',
                 borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, transparent 70%)',
+                background: 'radial-gradient(circle, rgba(0, 122, 255, 0.35) 0%, rgba(88, 86, 214, 0.2) 40%, transparent 70%)',
                 pointerEvents: 'none',
+                filter: 'blur(8px)',
               }}
             />
             
             <motion.div
               animate={{
-                scale: isHovered ? [1, 1.15, 1] : [1, 1.05, 1],
-                opacity: [0.2, 0.5, 0.2],
+                scale: isHovered ? [1, 1.18, 1] : [1, 1.08, 1],
+                opacity: [0.15, 0.4, 0.15],
               }}
               transition={{
-                duration: 2.5,
+                duration: 3,
                 repeat: Infinity,
-                ease: 'easeInOut',
-                delay: 0.3,
+                ease: [0.4, 0, 0.6, 1],
+                delay: 0.4,
               }}
               style={{
                 position: 'absolute',
-                inset: '-30px',
+                inset: '-36px',
                 borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)',
+                background: 'radial-gradient(circle, rgba(88, 86, 214, 0.25) 0%, rgba(175, 82, 222, 0.15) 50%, transparent 75%)',
                 pointerEvents: 'none',
+                filter: 'blur(12px)',
               }}
             />
 
@@ -79,21 +81,21 @@ export function ChatBubble() {
               animate={{
                 boxShadow: isHovered
                   ? [
-                      '0 0 30px rgba(99, 102, 241, 0.6), 0 0 60px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(255, 255, 255, 0.1)',
-                      '0 0 50px rgba(99, 102, 241, 0.8), 0 0 100px rgba(139, 92, 246, 0.6), inset 0 0 40px rgba(255, 255, 255, 0.2)',
-                      '0 0 30px rgba(99, 102, 241, 0.6), 0 0 60px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(255, 255, 255, 0.1)',
+                      '0 0 24px rgba(0, 122, 255, 0.5), 0 0 48px rgba(88, 86, 214, 0.35), 0 0 72px rgba(175, 82, 222, 0.25), inset 0 0 24px rgba(255, 255, 255, 0.15)',
+                      '0 0 36px rgba(0, 122, 255, 0.65), 0 0 72px rgba(88, 86, 214, 0.5), 0 0 108px rgba(175, 82, 222, 0.35), inset 0 0 32px rgba(255, 255, 255, 0.25)',
+                      '0 0 24px rgba(0, 122, 255, 0.5), 0 0 48px rgba(88, 86, 214, 0.35), 0 0 72px rgba(175, 82, 222, 0.25), inset 0 0 24px rgba(255, 255, 255, 0.15)',
                     ]
                   : [
-                      '0 0 20px rgba(99, 102, 241, 0.5), 0 0 40px rgba(139, 92, 246, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.05)',
-                      '0 0 30px rgba(99, 102, 241, 0.6), 0 0 60px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(255, 255, 255, 0.1)',
-                      '0 0 20px rgba(99, 102, 241, 0.5), 0 0 40px rgba(139, 92, 246, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.05)',
+                      '0 0 16px rgba(0, 122, 255, 0.4), 0 0 32px rgba(88, 86, 214, 0.25), 0 0 48px rgba(175, 82, 222, 0.15), inset 0 0 16px rgba(255, 255, 255, 0.1)',
+                      '0 0 24px rgba(0, 122, 255, 0.5), 0 0 48px rgba(88, 86, 214, 0.35), 0 0 72px rgba(175, 82, 222, 0.25), inset 0 0 24px rgba(255, 255, 255, 0.15)',
+                      '0 0 16px rgba(0, 122, 255, 0.4), 0 0 32px rgba(88, 86, 214, 0.25), 0 0 48px rgba(175, 82, 222, 0.15), inset 0 0 16px rgba(255, 255, 255, 0.1)',
                     ],
               }}
               transition={{
                 boxShadow: {
-                  duration: 2,
+                  duration: 2.5,
                   repeat: Infinity,
-                  ease: 'easeInOut',
+                  ease: [0.4, 0, 0.6, 1],
                 },
               }}
               style={{
@@ -101,14 +103,14 @@ export function ChatBubble() {
                 width: '72px',
                 height: '72px',
                 borderRadius: '50%',
-                border: 'none',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
                 background: `
-                  radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
-                  radial-gradient(circle at 70% 70%, rgba(139, 92, 246, 0.4) 0%, transparent 50%),
-                  linear-gradient(135deg, rgba(99, 102, 241, 0.95) 0%, rgba(139, 92, 246, 0.95) 50%, rgba(99, 102, 241, 0.95) 100%)
+                  radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.35) 0%, transparent 55%),
+                  radial-gradient(circle at 75% 75%, rgba(88, 86, 214, 0.3) 0%, transparent 55%),
+                  linear-gradient(135deg, rgba(0, 122, 255, 0.92) 0%, rgba(88, 86, 214, 0.92) 50%, rgba(175, 82, 222, 0.92) 100%)
                 `,
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
+                backdropFilter: 'blur(20px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -117,21 +119,22 @@ export function ChatBubble() {
                 color: 'white',
                 overflow: 'hidden',
                 isolation: 'isolate',
+                boxSizing: 'border-box',
               }}
             >
-              {/* Inner Shine */}
+              {/* Inner Shine - iPhone-style smooth sweep */}
               <motion.div
                 animate={{
                   background: [
-                    'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 60%)',
-                    'radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.4) 0%, transparent 60%)',
-                    'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 60%)',
+                    'radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.1) 30%, transparent 65%)',
+                    'radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.1) 30%, transparent 65%)',
+                    'radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.1) 30%, transparent 65%)',
                   ],
                 }}
                 transition={{
-                  duration: 3,
+                  duration: 4,
                   repeat: Infinity,
-                  ease: 'easeInOut',
+                  ease: [0.4, 0, 0.6, 1],
                 }}
                 style={{
                   position: 'absolute',
@@ -140,77 +143,98 @@ export function ChatBubble() {
                   pointerEvents: 'none',
                 }}
               />
+              
+              {/* Subtle inner glow layer */}
+              <motion.div
+                animate={{
+                  opacity: [0.3, 0.5, 0.3],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: [0.4, 0, 0.6, 1],
+                }}
+                style={{
+                  position: 'absolute',
+                  inset: '8px',
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%)',
+                  pointerEvents: 'none',
+                }}
+              />
 
-              {/* Sparkling particles inside orb - no emoji, just pure glow */}
-              {[...Array(8)].map((_, i) => (
+              {/* Sparkling particles - iPhone-style subtle shimmer */}
+              {[...Array(6)].map((_, i) => (
                 <motion.div
                   key={i}
                   animate={{
                     x: [
-                      Math.cos((i / 8) * Math.PI * 2) * 15,
-                      Math.cos((i / 8) * Math.PI * 2 + Math.PI) * 20,
-                      Math.cos((i / 8) * Math.PI * 2) * 15,
+                      Math.cos((i / 6) * Math.PI * 2) * 12,
+                      Math.cos((i / 6) * Math.PI * 2 + Math.PI) * 18,
+                      Math.cos((i / 6) * Math.PI * 2) * 12,
                     ],
                     y: [
-                      Math.sin((i / 8) * Math.PI * 2) * 15,
-                      Math.sin((i / 8) * Math.PI * 2 + Math.PI) * 20,
-                      Math.sin((i / 8) * Math.PI * 2) * 15,
+                      Math.sin((i / 6) * Math.PI * 2) * 12,
+                      Math.sin((i / 6) * Math.PI * 2 + Math.PI) * 18,
+                      Math.sin((i / 6) * Math.PI * 2) * 12,
                     ],
-                    opacity: [0.3, 0.8, 0.3],
-                    scale: [0.8, 1.2, 0.8],
+                    opacity: [0.2, 0.7, 0.2],
+                    scale: [0.6, 1.1, 0.6],
                   }}
                   transition={{
-                    duration: 3 + i * 0.2,
+                    duration: 4 + i * 0.3,
                     repeat: Infinity,
-                    ease: 'easeInOut',
-                    delay: i * 0.1,
+                    ease: [0.4, 0, 0.6, 1],
+                    delay: i * 0.15,
                   }}
                   style={{
                     position: 'absolute',
-                    width: '3px',
-                    height: '3px',
+                    width: '2.5px',
+                    height: '2.5px',
                     borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    boxShadow: '0 0 6px rgba(255, 255, 255, 0.8), 0 0 12px rgba(99, 102, 241, 0.6)',
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    boxShadow: '0 0 4px rgba(255, 255, 255, 0.9), 0 0 8px rgba(0, 122, 255, 0.5)',
                     left: '50%',
                     top: '50%',
                     transform: 'translate(-50%, -50%)',
                     pointerEvents: 'none',
+                    filter: 'blur(0.5px)',
                   }}
                 />
               ))}
 
-              {/* Active indicator - shows when voice is active */}
+              {/* Active indicator - iPhone-style pulsing dot */}
               {isActive && (
                 <motion.span
                   animate={{
-                    scale: [1, 1.3, 1],
-                    opacity: [0.8, 1, 0.8],
+                    scale: [1, 1.4, 1],
+                    opacity: [0.9, 1, 0.9],
                   }}
                   transition={{
-                    duration: 1.5,
+                    duration: 1.2,
                     repeat: Infinity,
-                    ease: 'easeInOut',
+                    ease: [0.4, 0, 0.6, 1],
                   }}
                   style={{
                     position: 'absolute',
-                    top: '4px',
-                    right: '4px',
-                    width: '12px',
-                    height: '12px',
-                    background: '#22c55e',
+                    top: '6px',
+                    right: '6px',
+                    width: '10px',
+                    height: '10px',
+                    background: 'rgba(52, 199, 89, 1)',
                     borderRadius: '50%',
-                    boxShadow: '0 0 12px rgba(34, 197, 94, 0.8), 0 0 24px rgba(34, 197, 94, 0.4)',
+                    boxShadow: '0 0 8px rgba(52, 199, 89, 0.8), 0 0 16px rgba(52, 199, 89, 0.5), inset 0 0 4px rgba(255, 255, 255, 0.3)',
                     zIndex: 2,
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
                   }}
                 />
               )}
             </motion.button>
 
-            {/* Floating Particles on hover */}
+            {/* Floating Particles on hover - iPhone-style subtle effect */}
             {isHovered && (
               <>
-                {[...Array(8)].map((_, i) => (
+                {[...Array(6)].map((_, i) => (
                   <motion.div
                     key={i}
                     initial={{
@@ -220,25 +244,26 @@ export function ChatBubble() {
                       scale: 0,
                     }}
                     animate={{
-                      x: 36 + Math.cos((i / 8) * Math.PI * 2) * 50,
-                      y: 36 + Math.sin((i / 8) * Math.PI * 2) * 50,
-                      opacity: [0, 1, 0],
-                      scale: [0, 1.5, 0],
+                      x: 36 + Math.cos((i / 6) * Math.PI * 2) * 45,
+                      y: 36 + Math.sin((i / 6) * Math.PI * 2) * 45,
+                      opacity: [0, 0.8, 0],
+                      scale: [0, 1.2, 0],
                     }}
                     transition={{
-                      duration: 2,
+                      duration: 2.5,
                       repeat: Infinity,
-                      delay: i * 0.1,
-                      ease: 'easeOut',
+                      delay: i * 0.12,
+                      ease: [0.4, 0, 0.6, 1],
                     }}
                     style={{
                       position: 'absolute',
-                      width: '5px',
-                      height: '5px',
+                      width: '4px',
+                      height: '4px',
                       borderRadius: '50%',
-                      background: `hsl(${(i * 45) % 360}, 70%, 60%)`,
-                      boxShadow: `0 0 10px hsl(${(i * 45) % 360}, 70%, 60%), 0 0 20px hsl(${(i * 45) % 360}, 70%, 40%)`,
+                      background: `rgba(${i % 2 === 0 ? '0, 122, 255' : '88, 86, 214'}, 0.8)`,
+                      boxShadow: `0 0 8px rgba(${i % 2 === 0 ? '0, 122, 255' : '88, 86, 214'}, 0.6), 0 0 16px rgba(${i % 2 === 0 ? '0, 122, 255' : '88, 86, 214'}, 0.3)`,
                       pointerEvents: 'none',
+                      filter: 'blur(1px)',
                     }}
                   />
                 ))}

@@ -50,11 +50,20 @@ function getOrchestrator(): AgentOrchestrator {
   return agentOrchestrator;
 }
 
+// Store accent preferences per session
+const sessionAccents = new Map<string, string>();
+
 // WebSocket handling for real-time chat
 io.on('connection', (socket) => {
   console.log(`🔌 Client connected: ${socket.id}`);
 
   let sessionId = socket.handshake.query.sessionId as string;
+  
+  // Handle accent preference
+  socket.on('set:accent', (data: { accent: string }) => {
+    sessionAccents.set(sessionId, data.accent);
+    console.log(`🌍 Accent set for session ${sessionId}: ${data.accent}`);
+  });
   
   socket.on('chat:message', async (data: { message: string; userId?: string; stream?: boolean }) => {
     try {
@@ -65,12 +74,16 @@ io.on('connection', (socket) => {
       // Emit typing indicator
       socket.emit('agent:typing', { isTyping: true });
 
+      // Get accent preference for this session
+      const accent = sessionAccents.get(sessionId) || 'en-US';
+      
       if (stream) {
         // Use streaming for faster perceived response
         await getOrchestrator().processMessageStream({
           message,
           sessionId,
           userId: userId || 'anonymous',
+          accent, // Pass accent to orchestrator
           onToken: (token: string) => {
             socket.emit('agent:stream', { token });
           },
@@ -86,6 +99,7 @@ io.on('connection', (socket) => {
         });
       } else {
         // Non-streaming fallback
+        const accent = sessionAccents.get(sessionId) || 'en-US';
         const response = await getOrchestrator().processMessage({
           message,
           sessionId,

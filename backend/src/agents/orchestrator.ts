@@ -10,11 +10,13 @@ interface ProcessMessageInput {
   message: string;
   sessionId: string;
   userId: string;
+  accent?: string; // User's accent/language preference
 }
 
 interface StreamMessageInput extends ProcessMessageInput {
   onToken: (token: string) => void;
   onComplete: (fullText: string) => void;
+  accent?: string; // User's accent/language preference
 }
 
 interface AgentResponse {
@@ -66,10 +68,10 @@ export class AgentOrchestrator {
   }
 
   async processMessage(input: ProcessMessageInput): Promise<AgentResponse> {
-    const { message, sessionId } = input;
+    const { message, sessionId, accent = 'en-US' } = input;
     const startTime = Date.now();
     
-    console.log(`⏱️ Processing: "${message}"`);
+    console.log(`⏱️ Processing: "${message}" (accent: ${accent})`);
 
     // Get or create conversation history
     if (!conversations.has(sessionId)) {
@@ -82,6 +84,9 @@ export class AgentOrchestrator {
       pendingBookings.set(sessionId, {});
     }
     const booking = pendingBookings.get(sessionId)!;
+
+    // Extract booking info with accent-specific handling
+    this.extractBookingInfo(message, booking, accent);
 
     // Check for booking-related keywords
     const lowerMessage = message.toLowerCase();
@@ -173,8 +178,8 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
 
       let responseText = response.choices[0].message.content || "I'm here to help!";
 
-      // Extract and store booking info from conversation
-      this.extractBookingInfo(message, booking);
+      // Extract and store booking info from conversation (already extracted above, but update if needed)
+      this.extractBookingInfo(message, booking, accent);
 
       // Check if booking is complete
       if (booking.name && booking.email && booking.service && (booking.date || booking.time)) {
@@ -301,10 +306,10 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
   }
 
   async processMessageStream(input: StreamMessageInput): Promise<void> {
-    const { message, sessionId, onToken, onComplete } = input;
+    const { message, sessionId, onToken, onComplete, accent = 'en-US' } = input;
     const startTime = Date.now();
     
-    console.log(`⏱️ Streaming: "${message}"`);
+    console.log(`⏱️ Streaming: "${message}" (accent: ${accent})`);
 
     // Get or create conversation history
     if (!conversations.has(sessionId)) {
@@ -318,8 +323,8 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
     }
     const booking = pendingBookings.get(sessionId)!;
 
-    // Extract booking info
-    this.extractBookingInfo(message, booking);
+    // Extract booking info with accent-specific handling
+    this.extractBookingInfo(message, booking, accent);
 
     // Detect if this seems like a problem-solving conversation
     const isProblemSolved = history.length > 0 && 
@@ -542,25 +547,138 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
     return Array.from(conversations.keys());
   }
 
-  private extractBookingInfo(message: string, booking: any) {
+  private extractBookingInfo(message: string, booking: any, accent: string = 'en-US') {
     const lower = message.toLowerCase();
     
-    // Extract email
-    const emailMatch = message.match(/[\w.-]+@[\w.-]+\.\w+/);
-    if (emailMatch) {
+    // Base name patterns (universal)
+    const namePatterns = [
+      /(?:my name is|i'm|i am|this is|call me|name's|name is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+      /(?:i'm|i am)\s+([A-Z][a-z]+)/i,
+      /(?:name)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+    ];
+    
+    // Accent-specific name patterns
+    if (accent === 'en-NG') {
+      // Nigerian English: "na me be", "my name na", "i be"
+      namePatterns.push(/(?:na me be|my name na|i be|me na)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    } else if (accent === 'en-IN' || accent === 'en-PK') {
+      // Indian/Pakistani English: "mera naam", "my name is", variations
+      namePatterns.push(/(?:mera naam|mera name|my name|name hai)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    } else if (accent === 'en-GB') {
+      // British English: "I'm called", "my name's"
+      namePatterns.push(/(?:i'm called|i am called|my name's)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    } else if (accent.startsWith('es-')) {
+      // Spanish: "me llamo", "mi nombre es"
+      namePatterns.push(/(?:me llamo|mi nombre es|soy)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    } else if (accent.startsWith('pt-')) {
+      // Portuguese: "meu nome é", "eu sou"
+      namePatterns.push(/(?:meu nome é|eu sou|chamo-me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    } else if (accent.startsWith('fr-')) {
+      // French: "je m'appelle", "mon nom est"
+      namePatterns.push(/(?:je m'appelle|mon nom est|je suis)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    } else if (accent.startsWith('de-')) {
+      // German: "ich heiße", "mein Name ist"
+      namePatterns.push(/(?:ich heiße|mein Name ist|ich bin)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    }
+    
+    // Extract name using all patterns
+    for (const pattern of namePatterns) {
+      const nameMatch = message.match(pattern);
+      if (nameMatch) {
+        booking.name = nameMatch[1].trim();
+        break;
+      }
+    }
+    
+    // Extract email with accent-specific handling
+    // Standard email pattern
+    let emailMatch = message.match(/[\w.-]+@[\w.-]+\.\w+/);
+    
+    // Handle spaced emails (common in speech recognition across all accents)
+    if (!emailMatch) {
+      // Pattern: "word word @ word word . word" -> "wordword@wordword.word"
+      const spacedEmailMatch = message.match(/([a-z0-9]+(?:\s+[a-z0-9]+)*)\s*[@]\s*([a-z]+(?:\s+[a-z]+)*)\s*[.]\s*([a-z]+)/i);
+      if (spacedEmailMatch) {
+        const local = spacedEmailMatch[1].replace(/\s+/g, '').toLowerCase();
+        const domain = spacedEmailMatch[2].replace(/\s+/g, '').toLowerCase();
+        const tld = spacedEmailMatch[3].replace(/\s+/g, '').toLowerCase();
+        booking.email = `${local}@${domain}.${tld}`;
+      }
+      
+      // Handle "at" instead of "@" (common in speech)
+      if (!booking.email) {
+        const atEmailMatch = message.match(/([a-z0-9]+(?:\s+[a-z0-9]+)*)\s+(?:at|@)\s+([a-z]+(?:\s+[a-z]+)*)\s+(?:dot|\.)\s+([a-z]+)/i);
+        if (atEmailMatch) {
+          const local = atEmailMatch[1].replace(/\s+/g, '').toLowerCase();
+          const domain = atEmailMatch[2].replace(/\s+/g, '').toLowerCase();
+          const tld = atEmailMatch[3].replace(/\s+/g, '').toLowerCase();
+          booking.email = `${local}@${domain}.${tld}`;
+        }
+      }
+    } else {
       booking.email = emailMatch[0];
     }
-
-    // Extract name (if they say "my name is X" or "I'm X" or "I am X")
-    const nameMatch = message.match(/(?:my name is|i'm|i am|this is|call me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
-    if (nameMatch) {
-      booking.name = nameMatch[1];
+    
+    // Accent-specific email corrections and common misrecognitions
+    if (booking.email) {
+      // Universal corrections
+      booking.email = booking.email
+        .replace(/gmail\.com/g, 'gmail.com')
+        .replace(/yahoo\.com/g, 'yahoo.com')
+        .replace(/hotmail\.com/g, 'hotmail.com')
+        .replace(/outlook\.com/g, 'outlook.com')
+        .replace(/gmail dot com/gi, 'gmail.com')
+        .replace(/yahoo dot com/gi, 'yahoo.com')
+        .replace(/hotmail dot com/gi, 'hotmail.com');
+      
+      // Accent-specific corrections
+      if (accent === 'en-IN' || accent === 'en-PK') {
+        // Indian/Pakistani: common misrecognitions
+        booking.email = booking.email
+          .replace(/gmail dot co dot in/gi, 'gmail.com')
+          .replace(/yahoo dot co dot in/gi, 'yahoo.com')
+          .replace(/gmail dot co dot uk/gi, 'gmail.com');
+      } else if (accent === 'en-NG') {
+        // Nigerian: common patterns
+        booking.email = booking.email
+          .replace(/gmail dot com dot ng/gi, 'gmail.com')
+          .replace(/yahoo dot com dot ng/gi, 'yahoo.com');
+      } else if (accent === 'en-GB') {
+        // British: "dot" instead of "."
+        booking.email = booking.email
+          .replace(/dot/gi, '.')
+          .replace(/\s+/g, '');
+      }
     }
 
-    // Extract phone
-    const phoneMatch = message.match(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/);
+    // Extract phone with accent-specific patterns
+    let phoneMatch = message.match(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/); // US/CA format
+    
+    // International phone patterns
+    if (!phoneMatch) {
+      // UK format: +44 or 0 followed by numbers
+      if (accent === 'en-GB') {
+        phoneMatch = message.match(/(?:\+44|0)\s*\d{2,3}\s*\d{3}\s*\d{3,4}/);
+      }
+      // Indian/Pakistani format: +91/+92 or 0 followed by 10 digits
+      else if (accent === 'en-IN') {
+        phoneMatch = message.match(/(?:\+91|0)?\s*\d{5}\s*\d{5}/);
+      } else if (accent === 'en-PK') {
+        phoneMatch = message.match(/(?:\+92|0)?\s*\d{4}\s*\d{7}/);
+      }
+      // Nigerian format: +234 or 0 followed by numbers
+      else if (accent === 'en-NG') {
+        phoneMatch = message.match(/(?:\+234|0)?\s*\d{3}\s*\d{3}\s*\d{4}/);
+      }
+      // Generic international: + followed by digits
+      else {
+        phoneMatch = message.match(/\+\d{1,3}[\s.-]?\d{1,4}[\s.-]?\d{1,4}[\s.-]?\d{1,9}/);
+      }
+    }
+    
     if (phoneMatch) {
-      booking.phone = phoneMatch[0];
+      // Clean up phone number (remove spaces, keep + and digits)
+      booking.phone = phoneMatch[0].replace(/\s+/g, '').replace(/[^\d+]/g, '');
     }
 
     // Extract service interest
