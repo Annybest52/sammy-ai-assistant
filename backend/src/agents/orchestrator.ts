@@ -365,6 +365,36 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
     // Extract booking info with accent-specific handling
     this.extractBookingInfo(message, booking, accent);
     
+    // Try to reconstruct incomplete email from conversation history
+    if (booking.email && (booking.email.length < 10 || /^\d+@/.test(booking.email))) {
+      console.log(`⚠️ Email looks incomplete: "${booking.email}" - searching conversation history...`);
+      
+      // Search recent messages for full email
+      const recentMessages = history.slice(-5).map(m => m.content).join(' ');
+      const fullEmailMatch = recentMessages.match(/[\w.-]+@[\w.-]+\.\w+/g);
+      
+      if (fullEmailMatch && fullEmailMatch.length > 0) {
+        // Find the most complete email (longest local part)
+        const bestEmail = fullEmailMatch.reduce((best, current) => {
+          const currentLocal = current.split('@')[0];
+          const bestLocal = best.split('@')[0];
+          return currentLocal.length > bestLocal.length ? current : best;
+        });
+        
+        if (bestEmail && bestEmail.length > booking.email.length) {
+          console.log(`✅ Found better email in history: "${bestEmail}" (was: "${booking.email}")`);
+          booking.email = bestEmail;
+        }
+      }
+      
+      // Also check current message for full email
+      const currentEmailMatch = message.match(/[\w.-]+@[\w.-]+\.\w+/);
+      if (currentEmailMatch && currentEmailMatch[0].length > booking.email.length) {
+        console.log(`✅ Found better email in current message: "${currentEmailMatch[0]}" (was: "${booking.email}")`);
+        booking.email = currentEmailMatch[0];
+      }
+    }
+    
     // Debug: Log booking state after extraction
     console.log('🔍 Booking state after extraction (stream):', JSON.stringify({
       name: booking.name,
@@ -655,13 +685,34 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
       }
       
       // Handle "at" instead of "@" (common in speech)
+      // Pattern: "2020 at gmail.com" or "mercyanny 2020 at gmail.com"
       if (!booking.email) {
         const atEmailMatch = message.match(/([a-z0-9]+(?:\s+[a-z0-9]+)*)\s+(?:at|@)\s+([a-z]+(?:\s+[a-z]+)*)\s+(?:dot|\.)\s+([a-z]+)/i);
         if (atEmailMatch) {
           const local = atEmailMatch[1].replace(/\s+/g, '').toLowerCase();
           const domain = atEmailMatch[2].replace(/\s+/g, '').toLowerCase();
           const tld = atEmailMatch[3].replace(/\s+/g, '').toLowerCase();
-          booking.email = `${local}@${domain}.${tld}`;
+          
+          // Check if email looks incomplete (local part too short or just numbers)
+          // If it's just numbers or very short, try to find the full email in conversation history
+          if (local.length < 3 || /^\d+$/.test(local)) {
+            console.log(`⚠️ Email local part looks incomplete: "${local}" - trying to find full email in history`);
+            // Don't set incomplete email yet - will try to reconstruct from history
+          } else {
+            booking.email = `${local}@${domain}.${tld}`;
+          }
+        }
+      }
+      
+      // Handle case where only domain is mentioned: "at gmail.com" or "@gmail.com"
+      // Try to find email in previous messages
+      if (!booking.email) {
+        const domainOnlyMatch = message.match(/(?:at|@)\s*([a-z]+(?:\s+[a-z]+)*)\s+(?:dot|\.)\s+([a-z]+)/i);
+        if (domainOnlyMatch) {
+          const domain = domainOnlyMatch[1].replace(/\s+/g, '').toLowerCase();
+          const tld = domainOnlyMatch[2].replace(/\s+/g, '').toLowerCase();
+          console.log(`⚠️ Only domain found: "${domain}.${tld}" - email local part missing`);
+          // Will try to reconstruct from history in the orchestrator
         }
       }
     } else {
