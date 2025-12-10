@@ -135,6 +135,22 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
       // Accent-specific corrections based on detected accent
       const accentCode = accent;
       
+      // Email-specific corrections (common misrecognitions)
+      // Fix common email misrecognitions before other corrections
+      text = text
+        // Common name misrecognitions in emails
+        .replace(/\bmessiani\b/gi, 'mercyanny')  // "messiani" -> "mercyanny"
+        .replace(/\bmessie\b/gi, 'mercy')
+        .replace(/\bmersie\b/gi, 'mercy')
+        .replace(/\bmersy\b/gi, 'mercy')
+        .replace(/\bmercy annie\b/gi, 'mercyanny')
+        .replace(/\bmercy any\b/gi, 'mercyanny')
+        .replace(/\bmercy anny\b/gi, 'mercyanny')
+        // Other common corrections
+        .replace(/\bgmail dot com\b/gi, 'gmail.com')
+        .replace(/\byahoo dot com\b/gi, 'yahoo.com')
+        .replace(/\bhotmail dot com\b/gi, 'hotmail.com');
+      
       // Universal corrections
       text = text
         .replace(/\bhi automation\b/gi, 'AI automation')
@@ -142,10 +158,7 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
         .replace(/\bhigh automation\b/gi, 'AI automation')
         .replace(/\bsammi\b/gi, 'Sammy')
         .replace(/\bsemi\b/gi, 'Sammy')
-        .replace(/\bsammy\b/gi, 'Sammy')
-        .replace(/\bgmail dot com\b/gi, 'gmail.com')
-        .replace(/\byahoo dot com\b/gi, 'yahoo.com')
-        .replace(/\bhotmail dot com\b/gi, 'hotmail.com');
+        .replace(/\bsammy\b/gi, 'Sammy');
       
       // Accent-specific corrections
       if (accentCode === 'en-NG') {

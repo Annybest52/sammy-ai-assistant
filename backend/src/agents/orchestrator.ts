@@ -670,6 +670,17 @@ Remember: Be natural, helpful, and make them feel like they're talking to a frie
     
     // Accent-specific email corrections and common misrecognitions
     if (booking.email) {
+      // Common email misrecognitions (fix before other corrections)
+      booking.email = booking.email
+        // Common name misrecognitions in emails
+        .replace(/messiani/gi, 'mercyanny')  // "messiani" -> "mercyanny"
+        .replace(/messie/gi, 'mercy')
+        .replace(/mersie/gi, 'mercy')
+        .replace(/mersy/gi, 'mercy')
+        .replace(/mercy\s+annie/gi, 'mercyanny')
+        .replace(/mercy\s+any/gi, 'mercyanny')
+        .replace(/mercy\s+anny/gi, 'mercyanny');
+      
       // Universal corrections
       booking.email = booking.email
         .replace(/gmail\.com/g, 'gmail.com')
