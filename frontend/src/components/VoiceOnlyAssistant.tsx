@@ -102,10 +102,25 @@ export function VoiceOnlyAssistant({ onStarted }: { onStarted?: () => void }) {
     };
 
     recognition.onresult = (event: any) => {
-      let text = '';
+      // Build transcript from final results only (avoid duplication)
+      let finalText = '';
+      let interimText = '';
+      
       for (let i = 0; i < event.results.length; i++) {
-        text += event.results[i][0].transcript;
+        const result = event.results[i];
+        if (result.isFinal) {
+          // Final result - add to final text
+          finalText += result[0].transcript;
+        } else {
+          // Interim result - only keep the latest one
+          if (i === event.results.length - 1) {
+            interimText = result[0].transcript;
+          }
+        }
       }
+      
+      // Combine: all final results + latest interim (if any)
+      const text = finalText + (interimText && !finalText ? interimText : '');
       
       // Fix email addresses - remove spaces in email patterns
       // Pattern: word(s) + @ + word(s) + . + word(s)

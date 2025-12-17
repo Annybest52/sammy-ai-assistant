@@ -9,6 +9,7 @@ import { scrapeRouter } from './api/scrape.routes.js';
 import { adminRouter } from './api/admin.routes.js';
 import { AgentOrchestrator } from './agents/orchestrator.js';
 import { MemoryManager } from './memory/manager.js';
+import { getGHLService } from './services/ghl.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -39,6 +40,14 @@ app.get('/health', (req, res) => {
 
 // Initialize services
 const memoryManager = new MemoryManager();
+
+// Initialize GHL service on startup to verify credentials
+const ghlService = getGHLService();
+if (ghlService) {
+  console.log('✅ GHL service initialized');
+} else {
+  console.warn('⚠️ GHL service not available (check GHL_API_KEY and GHL_LOCATION_ID)');
+}
 
 // Lazy initialization - only create orchestrator when needed
 let agentOrchestrator: AgentOrchestrator | null = null;
