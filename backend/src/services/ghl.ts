@@ -23,8 +23,9 @@ export class GHLService {
   private baseUrl: string = 'https://services.leadconnectorhq.com';
 
   constructor(apiKey: string, locationId: string) {
-    this.apiKey = apiKey;
-    this.locationId = locationId;
+    // Trim whitespace and newlines from credentials
+    this.apiKey = apiKey.trim();
+    this.locationId = locationId.trim();
   }
 
   // Create or get contact by email

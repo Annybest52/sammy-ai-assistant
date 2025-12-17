@@ -262,20 +262,35 @@ Return valid JSON only, no other text.`;
       const extracted = JSON.parse(response.choices[0].message.content || '{}') as BookingInfo;
       
       // Merge extracted info (only update if new value is provided)
-      if (extracted.name) booking.name = extracted.name;
+      if (extracted.name) booking.name = extracted.name.trim();
       if (extracted.email) {
-        // Clean email
-        booking.email = extracted.email
+        // Clean email - remove common speech recognition artifacts
+        let cleanEmail = extracted.email
           .toLowerCase()
           .replace(/addressis/gi, '')
+          .replace(/emailaddressis/gi, '')
+          .replace(/mygmailis/gi, '')
+          .replace(/gmailis/gi, '')
+          .replace(/emailis/gi, '')
           .replace(/merciani/gi, 'mercyanny')
           .replace(/messiani/gi, 'mercyanny')
+          .replace(/messiand/gi, 'mercyanny')
+          .replace(/\s+/g, '') // Remove all spaces
           .trim();
+        
+        // Validate email format
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+          booking.email = cleanEmail;
+        } else {
+          // Try to extract email from the cleaned string
+          const emailMatch = cleanEmail.match(/[\w.-]+@[\w.-]+\.\w+/);
+          if (emailMatch) booking.email = emailMatch[0];
+        }
       }
-      if (extracted.phone) booking.phone = extracted.phone;
-      if (extracted.service) booking.service = extracted.service;
-      if (extracted.date) booking.date = extracted.date;
-      if (extracted.time) booking.time = extracted.time;
+      if (extracted.phone) booking.phone = extracted.phone.trim();
+      if (extracted.service) booking.service = extracted.service.trim();
+      if (extracted.date) booking.date = extracted.date.trim();
+      if (extracted.time) booking.time = extracted.time.trim();
 
     } catch (error) {
       // Fallback: simple regex extraction if AI fails
