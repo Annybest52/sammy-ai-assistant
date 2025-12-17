@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import { conversationStorage } from '../storage/conversations.js';
+import { testGHLCredentials } from '../services/ghl.js';
 
 const router: ExpressRouter = Router();
 
@@ -95,6 +96,27 @@ router.get('/stats', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to get stats',
+    });
+  }
+});
+
+// GET /api/admin/test-ghl - Test GHL credentials
+router.get('/test-ghl', async (req: Request, res: Response) => {
+  try {
+    const result = await testGHLCredentials();
+    res.json({
+      success: result.valid,
+      valid: result.valid,
+      error: result.error,
+      message: result.valid 
+        ? '✅ GHL credentials are valid!' 
+        : `❌ GHL credentials are invalid: ${result.error}`,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      valid: false,
+      error: error.message || 'Unknown error',
     });
   }
 });

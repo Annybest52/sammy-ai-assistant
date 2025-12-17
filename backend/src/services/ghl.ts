@@ -501,14 +501,63 @@ export class GHLService {
 
 // Helper function to get GHL service instance
 export function getGHLService(): GHLService | null {
-  const apiKey = process.env.GHL_API_KEY;
-  const locationId = process.env.GHL_LOCATION_ID;
+  const apiKey = process.env.GHL_API_KEY?.trim();
+  const locationId = process.env.GHL_LOCATION_ID?.trim();
 
   if (!apiKey || !locationId) {
     console.warn('⚠️ GHL not configured: GHL_API_KEY and GHL_LOCATION_ID required');
     return null;
   }
 
+  // Validate API key format (should not have spaces/newlines)
+  if (apiKey.includes('\n') || (apiKey.includes(' ') && !apiKey.startsWith('eyJ'))) {
+    console.error('❌ GHL_API_KEY contains invalid characters (spaces/newlines). Please check your Railway environment variable.');
+  }
+
+  // Log API key info (masked for security)
+  const maskedKey = apiKey.length > 10 
+    ? `${apiKey.substring(0, 6)}...${apiKey.substring(apiKey.length - 6)}` 
+    : '***';
+  console.log(`🔑 GHL API Key loaded: ${maskedKey} (length: ${apiKey.length})`);
+  console.log(`📍 GHL Location ID: ${locationId}`);
+
   return new GHLService(apiKey, locationId);
+}
+
+// Test GHL credentials
+export async function testGHLCredentials(): Promise<{ valid: boolean; error?: string }> {
+  const apiKey = process.env.GHL_API_KEY?.trim();
+  const locationId = process.env.GHL_LOCATION_ID?.trim();
+
+  if (!apiKey || !locationId) {
+    return { valid: false, error: 'GHL_API_KEY and GHL_LOCATION_ID are required' };
+  }
+
+  try {
+    // Try a simple API call to verify credentials
+    const testUrl = `https://services.leadconnectorhq.com/contacts/search?locationId=${locationId}&email=test@example.com`;
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Version': '2021-07-28',
+      },
+    });
+
+    if (response.status === 401) {
+      return { valid: false, error: 'Invalid API key (401 Unauthorized). Please check your GHL_API_KEY in Railway.' };
+    }
+    if (response.status === 400) {
+      return { valid: true }; // 400 might mean bad request format but auth worked
+    }
+    if (response.ok || response.status === 404) {
+      return { valid: true }; // 404 means not found, but auth is valid
+    }
+    
+    return { valid: false, error: `Unexpected status: ${response.status}` };
+  } catch (error: any) {
+    return { valid: false, error: error.message || 'Unknown error' };
+  }
 }
 

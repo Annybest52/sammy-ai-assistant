@@ -275,6 +275,7 @@ Return valid JSON only, no other text.`;
           .replace(/merciani/gi, 'mercyanny')
           .replace(/messiani/gi, 'mercyanny')
           .replace(/messiand/gi, 'mercyanny')
+          .replace(/messianic/gi, 'mercyanny') // Fix "messianic" -> "mercyanny"
           .replace(/\s+/g, '') // Remove all spaces
           .trim();
         
